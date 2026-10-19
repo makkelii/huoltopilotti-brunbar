@@ -202,3 +202,80 @@ it("keeps failed production edits open and never reports database success", asyn
   ).not.toBeInTheDocument();
   expect(localStorage.getItem("huoltopilotti-demo-v1")).toBeNull();
 });
+
+it("does not load organization data while a recovery session is changing its password", async () => {
+  history.replaceState(null, "", "/?auth=recovery");
+  const f = fixture({ user: { id: "user-one" } } as Session);
+  render(<AuthGate client={f.client} isConfigured />);
+  await screen.findByRole("button", { name: "Tallenna" });
+  expect(f.eq).not.toHaveBeenCalled();
+  expect(f.rpc).not.toHaveBeenCalled();
+});
+it("does not allow password update from a bare recovery URL without a session", async () => {
+  history.replaceState(null, "", "/?auth=recovery");
+  const f = fixture();
+  render(<AuthGate client={f.client} isConfigured />);
+  await screen.findByText(/Palautus- tai kutsulinkki puuttuu/);
+  expect(screen.queryByLabelText("Salasana")).not.toBeInTheDocument();
+  expect(f.auth.updateUser).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole("button", { name: "Lähetä palautuslinkki" }),
+  ).toBeInTheDocument();
+});
+it("rejects an expired recovery callback even if another session already exists", async () => {
+  const f = fixture({ user: { id: "user-one" } } as Session);
+  render(
+    <AuthGate
+      client={f.client}
+      isConfigured
+      callback={{ purpose: "recovery", hasError: true }}
+    />,
+  );
+  await screen.findByText(/Palautus- tai kutsulinkki puuttuu/);
+  expect(screen.queryByLabelText("Salasana")).not.toBeInTheDocument();
+  expect(f.rpc).not.toHaveBeenCalled();
+});
+it("shows rate-limit diagnostics rather than a misleading sign-in failure", async () => {
+  const f = fixture();
+  render(<AuthGate client={f.client} isConfigured />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Unohtuiko salasana?" }),
+  );
+  fireEvent.change(screen.getByLabelText("Sähköposti"), {
+    target: { value: "owner@example.invalid" },
+  });
+  f.auth.resetPasswordForEmail.mockRejectedValueOnce({
+    code: "over_email_send_rate_limit",
+    status: 429,
+    message: "do not display provider detail",
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Lähetä palautuslinkki" }),
+  );
+  await screen.findByText(/lähetysraja on täyttynyt/);
+  expect(
+    screen.queryByText("do not display provider detail"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/Kirjautuminen epäonnistui/),
+  ).not.toBeInTheDocument();
+});
+it("handles a dashboard recovery callback with a session and without an auth query", async () => {
+  const f = fixture({ user: { id: "user-one" } } as Session);
+  render(
+    <AuthGate
+      client={f.client}
+      isConfigured
+      callback={{ purpose: "recovery", hasError: false }}
+    />,
+  );
+  fireEvent.change(await screen.findByLabelText("Salasana"), {
+    target: { value: "new-verified-password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Tallenna" }));
+  await waitFor(() =>
+    expect(f.auth.updateUser).toHaveBeenCalledWith({
+      password: "new-verified-password",
+    }),
+  );
+});

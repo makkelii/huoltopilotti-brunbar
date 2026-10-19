@@ -1,3 +1,4 @@
+import { inspectAuthCallback, buildAuthRedirect } from "./authFlow";
 import { validatePublicConfig } from "./publicConfig";
 import { createClient } from "@supabase/supabase-js";
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
@@ -7,6 +8,8 @@ export const publicKey = (
 )?.trim();
 validatePublicConfig(supabaseUrl, publicKey);
 export const configured = Boolean(supabaseUrl && publicKey);
+// Preserve callback intent before SDK initialization consumes the URL fragment.
+export const initialAuthCallback = inspectAuthCallback(window.location.href);
 export const supabase = configured
   ? createClient(supabaseUrl!, publicKey!, {
       auth: {
@@ -19,4 +22,4 @@ export const supabase = configured
     })
   : null;
 export const authRedirect = (purpose: "recovery" | "invite") =>
-  `${window.location.origin}${import.meta.env.BASE_URL}?auth=${purpose}`;
+  buildAuthRedirect(purpose, window.location.origin, import.meta.env.BASE_URL);

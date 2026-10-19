@@ -102,3 +102,7 @@ Local automated tests cover SDK/HTTP contracts with mocks and actual PostgreSQL 
 - Stale revisions fail rather than overwrite concurrent work. After a conflict, reload and reapply your change. If a write response is lost, it may have committed: reload before retrying. Completion is atomic and guarded against duplicate consumption; the UI never retries it blindly.
 - Current scope supports one shared organization and two initial accounts, one default preparation template, and no application data-deletion UI. Use reviewed server/admin procedures for membership changes, record deletion and GDPR requests. Photos/QR workflows, advanced reservations and notifications are not added in this PR. Stripe stays inactive.
 - Back up before migrating. Enable and monitor Supabase backups, retain audit/history records according to your policy, review access periodically, and use production SMTP. Revoke sessions through Supabase Dashboard when a device is lost.
+
+## Password recovery troubleshooting
+
+For localhost redirects, failed recovery requests, SMTP/rate limits and recovery email templates, follow **[PASSWORD_RECOVERY.md](PASSWORD_RECOVERY.md)**. It distinguishes frontend fixes from hosted settings, preserves security checks, and explains why an old emailed link must be replaced after correcting the project Site URL.

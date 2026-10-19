@@ -1,17 +1,36 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import App from "./App";
-import { supabase, configured, authRedirect } from "./data/supabase";
+import {
+  supabase,
+  configured,
+  authRedirect,
+  initialAuthCallback,
+} from "./data/supabase";
+import { inspectAuthCallback, recoveryErrorKey } from "./data/authFlow";
 import { Repository, type Snapshot } from "./data/repository";
 import { translate, type Lang } from "./i18n";
 import { Button } from "./components/ui/button";
 export default function AuthGate({
   client = supabase,
   isConfigured = configured,
+  callback,
 }: {
   client?: SupabaseClient | null;
   isConfigured?: boolean;
+  callback?: ReturnType<typeof inspectAuthCallback>;
 }) {
+  const [entry] = useState(
+    () =>
+      callback ||
+      (() => {
+        const current = inspectAuthCallback(location.href);
+        return current.purpose || current.hasError
+          ? current
+          : initialAuthCallback;
+      })(),
+  );
+  const [callbackFailed, setCallbackFailed] = useState(entry.hasError);
   const [lang, setLang] = useState<Lang>(() => {
     const l = localStorage.getItem("hp-lang");
     return l === "de" || l === "en" ? l : "fi";
@@ -24,12 +43,17 @@ export default function AuthGate({
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [recovery, setRecovery] = useState(
-      new URLSearchParams(location.search).has("auth"),
+      Boolean(entry.purpose || entry.hasError),
     ),
     [form, setForm] = useState<"login" | "recover">("login"),
     [demo, setDemo] = useState(
       new URLSearchParams(location.search).get("demo") === "1",
     );
+  const passwordReady = Boolean(recovery && session && !callbackFailed);
+  const linkInvalid = Boolean(
+    recovery && (!session || callbackFailed) && !loading,
+  );
+  const showRecoveryRequest = linkInvalid || form === "recover";
   const epoch = useRef(0);
   const sessionUserRef = useRef<string | null>(null);
   const repository = useRef<Repository | null>(null);
@@ -51,7 +75,10 @@ export default function AuthGate({
         repository.current = null;
       }
       sessionUserRef.current = next?.user.id || null;
-      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+      if (event === "PASSWORD_RECOVERY") {
+        setRecovery(true);
+        setCallbackFailed(false);
+      }
       setSession(next);
       if (!next) {
         epoch.current++;
@@ -60,13 +87,25 @@ export default function AuthGate({
       }
       setLoading(false);
     });
-    client.auth.getSession().then(({ data, error }) => {
-      if (!active || authEventReceived) return;
-      sessionUserRef.current = data.session?.user.id || null;
-      if (error) setError(t("authError"));
-      setSession(data.session);
-      setLoading(false);
-    });
+    client.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!active || authEventReceived) return;
+        sessionUserRef.current = data.session?.user.id || null;
+        if (error) {
+          setError(t(entry.purpose ? "recoveryLinkInvalid" : "authError"));
+          if (entry.purpose) setCallbackFailed(true);
+        }
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) {
+          setError(t(entry.purpose ? "recoveryLinkInvalid" : "authError"));
+          setCallbackFailed(Boolean(entry.purpose));
+          setLoading(false);
+        }
+      });
     return () => {
       active = false;
       subscription.unsubscribe();
@@ -99,11 +138,11 @@ export default function AuthGate({
     }
   }
   useEffect(() => {
-    if (session?.user.id && !demo) void load();
+    if (session?.user.id && !demo && !recovery) void load();
     return () => {
       epoch.current++;
     };
-  }, [session?.user.id, demo]);
+  }, [session?.user.id, demo, recovery]);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!client) return;
@@ -112,7 +151,7 @@ export default function AuthGate({
     setError("");
     setMessage("");
     try {
-      if (recovery) {
+      if (passwordReady) {
         const { error } = await client.auth.updateUser({
           password: String(data.get("password")),
         });
@@ -120,9 +159,9 @@ export default function AuthGate({
         setRecovery(false);
         history.replaceState(null, "", import.meta.env.BASE_URL);
         setMessage(t("passwordUpdated"));
-      } else if (form === "recover") {
+      } else if (showRecoveryRequest) {
         const { error } = await client.auth.resetPasswordForEmail(
-          String(data.get("email")),
+          String(data.get("email")).trim(),
           { redirectTo: authRedirect("recovery") },
         );
         if (error) throw error;
@@ -134,8 +173,16 @@ export default function AuthGate({
         });
         if (error) throw error;
       }
-    } catch {
-      setError(t("authError"));
+    } catch (cause) {
+      setError(
+        t(
+          passwordReady
+            ? recoveryErrorKey(cause, "update")
+            : showRecoveryRequest
+              ? recoveryErrorKey(cause, "request")
+              : "authError",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -209,18 +256,23 @@ export default function AuthGate({
           </select>
         </label>
         <h2>
-          {recovery
+          {passwordReady
             ? t("setPassword")
-            : session
-              ? t("accessTitle")
-              : form === "recover"
-                ? t("recoverPassword")
-                : t("privateSignIn")}
+            : linkInvalid
+              ? t("recoverPassword")
+              : session
+                ? t("accessTitle")
+                : form === "recover"
+                  ? t("recoverPassword")
+                  : t("privateSignIn")}
         </h2>
         <p>{t("privateNotice")}</p>
+        {linkInvalid && !error && (
+          <p role="alert">{t("recoveryLinkInvalid")}</p>
+        )}
         {(!session || recovery) && (
           <form onSubmit={submit}>
-            {!recovery && (
+            {!passwordReady && (
               <label>
                 {t("email")}
                 <input
@@ -232,23 +284,25 @@ export default function AuthGate({
                 />
               </label>
             )}
-            {(recovery || form === "login") && (
+            {(passwordReady || !showRecoveryRequest) && (
               <label>
                 {t("password")}
                 <input
                   type="password"
                   name="password"
-                  autoComplete={recovery ? "new-password" : "current-password"}
-                  minLength={recovery ? 12 : 1}
+                  autoComplete={
+                    passwordReady ? "new-password" : "current-password"
+                  }
+                  minLength={passwordReady ? 12 : 1}
                   maxLength={128}
                   required
                 />
               </label>
             )}
             <Button disabled={busy} type="submit">
-              {recovery
+              {passwordReady
                 ? t("save")
-                : form === "recover"
+                : showRecoveryRequest
                   ? t("sendRecovery")
                   : t("signIn")}
             </Button>
@@ -262,6 +316,9 @@ export default function AuthGate({
               variant="outline"
               onClick={() => {
                 setRecovery(false);
+                setCallbackFailed(false);
+                setError("");
+                setMessage("");
                 setForm("recover");
                 history.replaceState(null, "", import.meta.env.BASE_URL);
               }}
@@ -283,9 +340,11 @@ export default function AuthGate({
           )}
           {session && (
             <>
-              <Button variant="outline" onClick={() => void load()}>
-                {t("reload")}
-              </Button>
+              {!recovery && (
+                <Button variant="outline" onClick={() => void load()}>
+                  {t("reload")}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 disabled={busy}

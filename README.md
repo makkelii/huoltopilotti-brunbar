@@ -57,3 +57,5 @@ The source-repository workflow only validates; it cannot deploy Pages. A separat
 This branch includes PR #2 (still open at inspection), preserving all Supabase implementation. Do not copy the old demo-only main into the new repository. No database schema or bootstrap reset is introduced here. The existing `invite-technician` function is retained unchanged; brunbar uses `invite-technician-brunbar` with `BRUNBAR_APP_ORIGIN` so legacy `APP_ORIGIN` remains untouched.
 
 No live hosting, custom domain, DNS, Auth settings or database has been changed. Live Supabase configuration, email delivery and operator acceptance tests remain necessary. Billing stays disabled.
+
+Password recovery setup and Finnish troubleshooting: [docs/PASSWORD_RECOVERY.md](docs/PASSWORD_RECOVERY.md). Hosted Supabase URL/SMTP/template configuration must be verified independently; frontend commits do not change it.

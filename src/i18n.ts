@@ -1,5 +1,51 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  recoveryRequestError: [
+    "Palautuspyyntöä ei voitu lähettää. Tarkista verkkoyhteys. Jos ongelma jatkuu, ylläpitäjän tulee tarkistaa Supabasen Auth-lokit, sähköpostiasetukset ja palautusosoite.",
+    "The recovery request could not be sent. Check your connection. If this continues, ask an administrator to check Supabase Auth logs, email settings and the redirect URL.",
+    "Die Wiederherstellungsanfrage konnte nicht gesendet werden. Verbindung prüfen. Bei weiteren Fehlern muss die Administration Supabase-Auth-Protokolle, E-Mail-Einstellungen und Rückleitungsadresse prüfen.",
+  ],
+  recoveryRateLimit: [
+    "Palautuspyyntöjen tai sähköpostien lähetysraja on täyttynyt. Odota ennen uutta yritystä. Ylläpitäjä voi tarkistaa Auth-lokit ja lähetysrajat.",
+    "The recovery or email rate limit has been reached. Wait before retrying. An administrator can check Auth logs and rate limits.",
+    "Das Limit für Wiederherstellungsanfragen oder E-Mails wurde erreicht. Vor erneutem Versuch warten. Die Administration kann Auth-Protokolle und Limits prüfen.",
+  ],
+  recoveryMailRestricted: [
+    "Sähköpostipalvelu ei salli tätä vastaanottajaa. Ylläpitäjän tulee määrittää tuotantoon oma SMTP-palvelu.",
+    "The email service does not allow this recipient. An administrator must configure a production SMTP service.",
+    "Der E-Mail-Dienst erlaubt diesen Empfänger nicht. Die Administration muss einen SMTP-Dienst für den Produktivbetrieb konfigurieren.",
+  ],
+  recoveryEmailDisabled: [
+    "Sähköpostikirjautuminen ei ole käytössä Supabase-projektissa. Pyydä ylläpitäjää tarkistamaan Email-asetukset.",
+    "Email authentication is disabled in the Supabase project. Ask an administrator to check Email settings.",
+    "E-Mail-Anmeldung ist im Supabase-Projekt deaktiviert. Administration um Prüfung der E-Mail-Einstellungen bitten.",
+  ],
+  recoveryCaptcha: [
+    "Palvelu vaatii CAPTCHA-varmennuksen. Ylläpitäjän tulee tarkistaa sovelluksen CAPTCHA-integraatio.",
+    "The service requires CAPTCHA verification. An administrator must check the application CAPTCHA integration.",
+    "Der Dienst erfordert eine CAPTCHA-Prüfung. Die Administration muss die CAPTCHA-Integration der Anwendung prüfen.",
+  ],
+  recoveryLinkInvalid: [
+    "Palautus- tai kutsulinkki puuttuu, on vanhentunut tai sitä ei voitu vahvistaa. Avaa sähköpostin uusin linkki tai pyydä uusi palautuslinkki.",
+    "The recovery or invitation link is missing, expired or could not be verified. Open the latest emailed link or request a new recovery link.",
+    "Der Wiederherstellungs- oder Einladungslink fehlt, ist abgelaufen oder konnte nicht bestätigt werden. Neuesten E-Mail-Link öffnen oder neuen Link anfordern.",
+  ],
+  recoveryServiceError: [
+    "Supabasen sähköposti- tai tunnistuspalvelu palautti palvelinvirheen. Ylläpitäjän tulee tarkistaa Auth-lokit ja SMTP-asetukset.",
+    "Supabase email or authentication service returned a server error. An administrator must check Auth logs and SMTP settings.",
+    "Der E-Mail- oder Authentifizierungsdienst von Supabase meldet einen Serverfehler. Die Administration muss Auth-Protokolle und SMTP-Einstellungen prüfen.",
+  ],
+  passwordPolicyError: [
+    "Salasana ei täytä vaatimuksia tai se on sama kuin aiempi salasana. Valitse uusi vahva salasana.",
+    "The password does not meet requirements or matches the previous password. Choose a new strong password.",
+    "Das Passwort erfüllt die Anforderungen nicht oder entspricht dem bisherigen Passwort. Neues starkes Passwort wählen.",
+  ],
+  passwordUpdateError: [
+    "Salasanaa ei voitu päivittää. Tarkista verkkoyhteys ja salasanavaatimukset. Tarvittaessa avaa uusi palautuslinkki.",
+    "The password could not be updated. Check your connection and password requirements. Open a new recovery link if needed.",
+    "Das Passwort konnte nicht aktualisiert werden. Verbindung und Passwortanforderungen prüfen. Bei Bedarf neuen Wiederherstellungslink öffnen.",
+  ],
+
   remove: ["Poista", "Remove", "Entfernen"],
   privateSignIn: [
     "Kirjaudu työtilaan",
