@@ -77,7 +77,17 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await dialog.getByRole("combobox").first().selectOption("review");
   await expect(dialog.getByRole("combobox").first()).toHaveValue("review");
   await dialog.getByRole("button", { name: "Kirjaa valmistuminen" }).click();
-  await expect(dialog.getByRole("spinbutton")).toHaveCount(1);
+  await expect(dialog.getByRole("spinbutton")).toHaveCount(3);
+  await expect(dialog.getByLabel("Käytetty määrä · SKF 6205-2RS")).toHaveValue(
+    "2",
+  );
+  // Verify removal and explicit registry re-addition after reviewing the prefilled plan.
+  await dialog
+    .getByRole("button", { name: "Poista valinta · SKF 6205-2RS" })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Poista valinta · Momenttiavain" })
+    .click();
   await dialog
     .getByRole("button", { name: "Lisää varaosa (valinnainen)" })
     .click();

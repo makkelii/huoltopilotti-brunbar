@@ -35,7 +35,9 @@ export function CompletionItems({
   const [manual, setManual] = useState<InventoryGroup | null>(null);
   const [manualName, setManualName] = useState("");
   const [manualQuantity, setManualQuantity] = useState(1);
-  const [selected, setSelected] = useState<Item[]>([]);
+  const [selected, setSelected] = useState<Item[]>(() =>
+    inventory.filter((item) => actual[item.id] !== undefined),
+  );
   const [group, setGroup] = useState<InventoryGroup | null>(null);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);

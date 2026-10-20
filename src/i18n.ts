@@ -1,5 +1,20 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  completedAsPlanned: [
+    "Huolto tehty suunnitelman mukaan.",
+    "Maintenance completed as planned.",
+    "Wartung wie geplant durchgeführt.",
+  ],
+  completionReview: [
+    "Suunnitellut nimikkeet ja työaika on esitäytetty tarkistettavaksi. Poista käyttämättömät, korjaa määrät ja aika sekä kirjaa poikkeamat. Vahvistat toteuman vasta painamalla Kirjaa valmiiksi.",
+    "Planned items and time are prefilled for review. Remove unused items, adjust quantities and time, and record exceptions. Only Record complete confirms actual usage.",
+    "Geplante Artikel und Zeit sind zur Prüfung vorausgefüllt. Unbenutzte Artikel entfernen, Mengen und Zeit korrigieren und Abweichungen eintragen. Erst Abschließen bestätigt den tatsächlichen Verbrauch.",
+  ],
+  completionUnavailable: [
+    "Näitä tarpeita ei voitu esitäyttää. Tarkista suunnitelma ja lisää oikea toteuma",
+    "These requirements could not be prefilled. Review the plan and enter actual usage",
+    "Diese Bedarfe konnten nicht vorausgefüllt werden. Plan prüfen und tatsächliche Verwendung eintragen",
+  ],
   removeRegistry: [
     "Poista lopullisesti rekisteristä",
     "Remove permanently from registry",
