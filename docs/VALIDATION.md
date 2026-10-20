@@ -1,3 +1,17 @@
+# Huoltohistoria- ja yrityseristyspäivityksen testit (20.10.2026)
+
+Paikallisesti ajetut komennot: lint, typecheck, build ja verify:build; Vitest **59 testiä**, integraatio-osajoukko **22 testiä**, Playwright **14 testiä** työpöydällä ja mobiilissa sekä deployment-suojaukset **12 testiä**. `npm run test:db` suorittaa kaikki kolme migraatiota erillisessä PostgreSQL 16 -kontissa, yrityseristyksen ja samanaikaisen viimeisen varaosan kulutuksen testit sekä uuden `history.sql`-kokonaisuuden.
+
+Uudet tarkistukset: suorituskerran muuttumaton tilannekuva, toistuvan työn erillinen uusi historia, työkalun säilyvä saldo, todellinen työaika, tarvikkeen nimen muuttumattomuus historiassa rekisterimuutoksen jälkeen, vanhan huollon avaaminen laitteen historiasta sivun päivityksen jälkeen, käytöstä poistettu varaosa, usean jäsenyyden oletusorganisaatio ja epäselvän jäsenyyden esto. Tietokanta testaa myös toisen erikseen sallitun yrityksen kutsun, teknikon oikeuksien korotuksen eston ja yksilöllisen oletusjäsenyyden. Alkuperäiset kirjautumisen, palautuksen ja kutsujen testit säilyvät.
+
+Huoltohistorian suojaus esti aluksi vanhan testifixtuurin valmistuneen työn uudelleenosoituksen: kutsutesti erotettiin omaksi yrityksekseen, joten historiaa ei enää tarvitse muuttaa testin valmistelussa. Tämä vastaa tarkoitettua tuotantokäyttäytymistä.
+
+Supabasen tuotantoyhteyttä, Auth-asetuksia, oikeita sähköposteja tai tuotantokannan asennettua skeemaa ei testattu. Selain käyttää oikeaa Supabase SDK:ta mockatuilla HTTP-vastauksilla; SQL-testi käyttää oikeaa PostgreSQL:ää minimaalisilla Auth/Storage-fixtuureilla. Uutta migraatiota ei ajettu tuotantoon, käyttäjiä ei kutsuttu eikä sivustoa julkaistu.
+
+Aiemmat validointiraportit alla ovat aiempien versioiden tuloksia.
+
+---
+
 # Executed validation — brunbar.fi preparation
 
 Tests ran in the local implementation environment with Node 24.19, npm 11.9, installed Chromium and Docker PostgreSQL 16.15. No live Supabase project credentials were supplied. No Pages/DNS/custom-domain settings were changed. No live accounts were created, no real invitations/recovery messages were sent, and no deployment or payment activation was performed.

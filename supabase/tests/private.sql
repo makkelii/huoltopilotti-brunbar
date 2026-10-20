@@ -21,6 +21,7 @@ select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002'
 do $$ begin
 if private_snapshot('20000000-0000-0000-0000-000000000001')->'store'->'assets'->0->>'name'<>'Shared motor' then raise exception 'shared asset not visible';end if;
 if private_snapshot('20000000-0000-0000-0000-000000000001')->'store'->>'templateVersion'<>'1' then raise exception 'template missing';end if;
+begin perform manage_organization_member('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002','administrator');raise exception 'technician promoted self';exception when insufficient_privilege then null;end;
 begin perform private_mutate('20000000-0000-0000-0000-000000000001',3,'item','{}');raise exception 'technician modified inventory';exception when insufficient_privilege then null;end;
 begin perform private_mutate('20000000-0000-0000-0000-000000000001',3,'template','{"requirements":[]}');raise exception 'technician approved template';exception when insufficient_privilege then null;end;
 begin update inventory set quantity=99;raise exception 'direct inventory write';exception when insufficient_privilege then null;end;
@@ -72,13 +73,24 @@ do $$ begin
 if (select count(*) from organizations)<>0 then raise exception 'unauthorized organizations visible';end if;
 begin perform private_snapshot('20000000-0000-0000-0000-000000000001');raise exception 'outsider snapshot';exception when insufficient_privilege then null;end;
 end $$;
+-- Completion snapshot cannot be rewritten by subsequent registry edits, even privileged SQL.
+reset role;
+do $$ declare original jsonb; begin
+select snapshot into original from maintenance_history where job_id='50000000-0000-0000-0000-000000000001';
+if original->'usedItems'->0->>'name'<>'Bearing' or original->>'performedBy'<>'tech@example.invalid' then raise exception 'snapshot incomplete';end if;
+update inventory set name='Renamed bearing' where id='40000000-0000-0000-0000-000000000001';
+if (select snapshot from maintenance_history where job_id='50000000-0000-0000-0000-000000000001') is distinct from original then raise exception 'history changed';end if;
+begin update maintenance_history set notes='overwrite';raise exception 'history mutable';exception when raise_exception then if sqlerrm<>'completed history is immutable' then raise;end if;end;
+begin delete from maintenance_jobs where status='completed';raise exception 'job deletable';exception when raise_exception then if sqlerrm<>'completed history is immutable' then raise;end if;end;
+end $$;
 -- Private invitations: owner only, fixed technician role, confirmed email, single use.
 reset role;
-update maintenance_jobs set assigned_to='10000000-0000-0000-0000-000000000001' where organization_id='20000000-0000-0000-0000-000000000001';
-delete from memberships where user_id='10000000-0000-0000-0000-000000000002';
+insert into organizations(id,name) values('20000000-0000-0000-0000-000000000003','Invitation fixture');
+insert into memberships(organization_id,user_id,role,display_name) values('20000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000001','owner','owner@example.invalid');
+update private_deployment set organization_id='20000000-0000-0000-0000-000000000003';
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',true);
-select reserve_private_invitation('20000000-0000-0000-0000-000000000001','new-tech@example.invalid');
+select reserve_private_invitation('20000000-0000-0000-0000-000000000003','new-tech@example.invalid');
 reset role;
 insert into auth.users(id,email) values('10000000-0000-0000-0000-000000000006','new-tech@example.invalid');
 do $$ begin if exists(select 1 from memberships where user_id='10000000-0000-0000-0000-000000000006') then raise exception 'unconfirmed user joined';end if;end $$;
@@ -90,11 +102,11 @@ end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000006',true);
 do $$ begin
-begin perform reserve_private_invitation('20000000-0000-0000-0000-000000000001','third@example.invalid');raise exception 'technician invited';exception when insufficient_privilege then null;end;
+begin perform reserve_private_invitation('20000000-0000-0000-0000-000000000003','third@example.invalid');raise exception 'technician invited';exception when insufficient_privilege then null;end;
 end $$;
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',true);
 do $$ begin
-begin perform reserve_private_invitation('20000000-0000-0000-0000-000000000001','third@example.invalid');raise exception 'third user invitation allowed';exception when raise_exception then if sqlerrm<>'private deployment is limited to two users' then raise;end if;end;
+begin perform reserve_private_invitation('20000000-0000-0000-0000-000000000003','third@example.invalid');raise exception 'third user invitation allowed';exception when raise_exception then if sqlerrm<>'private deployment is limited to two users' then raise;end if;end;
 end $$;
 set local role anon;
 do $$ begin

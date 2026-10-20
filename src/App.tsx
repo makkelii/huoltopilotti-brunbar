@@ -79,10 +79,11 @@ export default function App({
   const live = Boolean(repository),
     orgId = initialSnapshot?.organizationId || "demo",
     organizationName = initialSnapshot?.organizationName || "Nordic Works Oy";
-  const canManage =
-    !live || ["owner", "administrator"].includes(initialSnapshot?.role || "");
   const snapshotRef = useRef(initialSnapshot),
     savingRef = useRef(false);
+  const canManage =
+    !live ||
+    ["owner", "administrator"].includes(snapshotRef.current?.role || "");
   const [saving, setSaving] = useState(false),
     [inviteEmail, setInviteEmail] = useState(""),
     [inviteStatus, setInviteStatus] = useState("");
@@ -136,6 +137,7 @@ export default function App({
   const [page, setPage] = useState<Page>("dashboard"),
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
+    [inventoryType, setInventoryType] = useState("all"),
     [dark, setDark] = useState(localStorage.getItem("hp-theme") === "dark"),
     [mobile, setMobile] = useState(false),
     [toast, setToast] = useState(""),
@@ -147,6 +149,9 @@ export default function App({
     [symptoms, setSymptoms] = useState(""),
     [searched, setSearched] = useState(false),
     [actual, setActual] = useState<Record<string, number>>({}),
+    [historyAsset, setHistoryAsset] = useState<string | null>(null),
+    [actualMinutes, setActualMinutes] = useState(60),
+    [completionNotes, setCompletionNotes] = useState(""),
     [notes, setNotes] = useState(""),
     [completion, setCompletion] = useState(false),
     [error, setError] = useState("");
@@ -326,6 +331,7 @@ export default function App({
         notes: previous?.notes || "",
         actual: previous?.actual || {},
         recurrence: Number(s("recurrence")),
+        description: s("description"),
       };
       ok = await change({
         ...store,
@@ -347,6 +353,9 @@ export default function App({
         calibration: s("calibration"),
         compatible: s("compatible"),
         alternatives: s("alternatives"),
+        unit: s("unit"),
+        externalId: s("externalId"),
+        inactive: f.get("inactive") === "on",
       };
       ok = await change({
         ...store,
@@ -383,7 +392,20 @@ export default function App({
   async function finish() {
     if (!chosen) return;
     try {
-      if (!(await change(completeJob(store, chosen.id, actual, notes)))) return;
+      if (
+        !(await change(
+          completeJob(
+            store,
+            chosen.id,
+            actual,
+            notes,
+            actualMinutes,
+            userName,
+            completionNotes,
+          ),
+        ))
+      )
+        return;
       setCompletion(false);
       setSelected(null);
       setError("");
@@ -1019,8 +1041,7 @@ export default function App({
                       <button
                         className="text-button"
                         onClick={() => {
-                          go("jobs");
-                          setQuery(a.name);
+                          setHistoryAsset(a.id);
                         }}
                       >
                         {t("history")}
@@ -1033,6 +1054,19 @@ export default function App({
           )}
           {page === "inventory" && (
             <div className="card table-scroll">
+              <label>
+                {t("type")}{" "}
+                <select
+                  value={inventoryType}
+                  onChange={(e) => setInventoryType(e.target.value)}
+                >
+                  {["all", "tools", "parts", "consumables"].map((type) => (
+                    <option key={type} value={type}>
+                      {t(type as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <table>
                 <thead>
                   <tr>
@@ -1051,6 +1085,10 @@ export default function App({
                 </thead>
                 <tbody>
                   {store.items
+                    .filter(
+                      (i) =>
+                        inventoryType === "all" || i.type === inventoryType,
+                    )
                     .filter((i) =>
                       (i.name + " " + i.spec)
                         .toLowerCase()
@@ -1060,6 +1098,7 @@ export default function App({
                       <tr key={i.id}>
                         <td>
                           <strong>{i.name}</strong>
+                          {i.inactive && <small>{t("inactive")}</small>}
                           <small>
                             {i.manufacturer} · {i.partNumber}
                           </small>
@@ -1338,6 +1377,45 @@ export default function App({
                     {snapshotRef.current?.members.map((m) => (
                       <p key={m.userId}>
                         {m.name} · {t(m.role as Key)}
+                        {canManage &&
+                          m.role !== "owner" &&
+                          m.userId !==
+                            snapshotRef.current?.members.find(
+                              (member) => member.name === userName,
+                            )?.userId && (
+                            <select
+                              aria-label={m.name}
+                              value={m.role}
+                              onChange={async (e) => {
+                                if (!supabase) return;
+                                const { error } = await supabase.rpc(
+                                  "manage_organization_member",
+                                  {
+                                    p_org: orgId,
+                                    p_user: m.userId,
+                                    p_role: e.target.value,
+                                  },
+                                );
+                                if (error) setError(t("saveError"));
+                                else
+                                  await refresh().catch(() =>
+                                    setError(t("accessError")),
+                                  );
+                              }}
+                            >
+                              {[
+                                "technician",
+                                "viewer",
+                                ...(snapshotRef.current?.role === "owner"
+                                  ? ["administrator"]
+                                  : []),
+                              ].map((role) => (
+                                <option key={role} value={role}>
+                                  {t(role as Key)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                       </p>
                     ))}
                     {canManage && (
@@ -1532,6 +1610,14 @@ export default function App({
                 {modal === "job" && (
                   <>
                     <label>
+                      {t("description")}
+                      <textarea
+                        name="description"
+                        defaultValue={(editing as Job)?.description}
+                      />
+                    </label>
+
+                    <label>
                       {t("equipment")}
                       <select
                         required
@@ -1620,6 +1706,29 @@ export default function App({
                 )}
                 {modal === "item" && (
                   <>
+                    <label>
+                      {t("unit")}
+                      <input
+                        name="unit"
+                        defaultValue={(editing as Item)?.unit || "kpl"}
+                      />
+                    </label>
+                    <label>
+                      {t("externalId")}
+                      <input
+                        name="externalId"
+                        defaultValue={(editing as Item)?.externalId}
+                      />
+                    </label>
+                    <label>
+                      <input
+                        name="inactive"
+                        type="checkbox"
+                        defaultChecked={(editing as Item)?.inactive}
+                      />{" "}
+                      {t("inactive")}
+                    </label>
+
                     <div className="form-grid">
                       <label>
                         {t("type")}
@@ -1642,7 +1751,7 @@ export default function App({
                           type="number"
                           name="quantity"
                           min="0"
-                          step="1"
+                          step="any"
                           required
                           defaultValue={(editing as Item)?.quantity || 0}
                         />
@@ -1764,7 +1873,11 @@ export default function App({
                   <span className="badge planned">{t(readiness(chosen))}</span>
                 </div>
                 {chosen.requirements.map((r) => {
-                  const item = store.items.find((i) => i.id === r.itemId);
+                  const item = (
+                    chosen.status === "completed"
+                      ? chosen.usedItems || []
+                      : store.items
+                  ).find((i) => i.id === r.itemId);
                   return (
                     <div className="requirement" key={r.id}>
                       <div>
@@ -1838,6 +1951,8 @@ export default function App({
                     <Button
                       onClick={() => {
                         setCompletion(true);
+                        setCompletionNotes("");
+                        setActualMinutes(chosen.duration);
                         setActual({});
                       }}
                     >
@@ -1854,33 +1969,55 @@ export default function App({
                     }}
                   >
                     <h3>{t("actual")}</h3>
-                    {store.items.map((i) => (
-                      <label key={i.id}>
-                        {i.name}{" "}
-                        <small>
-                          ({t("quantity")}: {i.quantity})
-                        </small>
-                        <input
-                          type="number"
-                          min="0"
-                          max={i.quantity}
-                          step="1"
-                          value={actual[i.id] || 0}
-                          onChange={(e) =>
-                            setActual({
-                              ...actual,
-                              [i.id]: Number(e.target.value),
-                            })
-                          }
-                        />
-                      </label>
-                    ))}
+                    <label>
+                      {t("actualMinutes")}
+                      <input
+                        type="number"
+                        min="1"
+                        max="100000"
+                        required
+                        value={actualMinutes}
+                        onChange={(e) =>
+                          setActualMinutes(Number(e.target.value))
+                        }
+                      />
+                    </label>
+                    {store.items
+                      .filter((i) => !i.inactive)
+                      .map((i) => (
+                        <label key={i.id}>
+                          {i.name}{" "}
+                          <small>
+                            ({t("quantity")}: {i.quantity})
+                          </small>
+                          <input
+                            type="number"
+                            min="0"
+                            max={i.quantity}
+                            step="any"
+                            value={actual[i.id] || 0}
+                            onChange={(e) =>
+                              setActual({
+                                ...actual,
+                                [i.id]: Number(e.target.value),
+                              })
+                            }
+                          />
+                        </label>
+                      ))}
                     <label>
                       {t("notes")}
                       <textarea
                         required
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {t("additionalNotes")}
+                      <textarea
+                        value={completionNotes}
+                        onChange={(e) => setCompletionNotes(e.target.value)}
                       />
                     </label>
                     <p className="notice">{t("proposal")}</p>
@@ -1895,17 +2032,90 @@ export default function App({
                 {chosen.status === "completed" && (
                   <div className="completion">
                     <h3>{t("notes")}</h3>
+                    {chosen.legacyReconstructed && (
+                      <p className="notice">{t("legacyHistory")}</p>
+                    )}
+                    <p>{chosen.description}</p>
                     <p>{chosen.notes}</p>
+                    {chosen.completionNotes && (
+                      <p>
+                        {t("additionalNotes")}: {chosen.completionNotes}
+                      </p>
+                    )}
                     <h3>{t("actual")}</h3>
-                    {Object.entries(chosen.actual).map(([key, n]) => (
-                      <p key={key}>
-                        {store.items.find((i) => i.id === key)?.name}: {n}
+                    <p>
+                      {t("performedBy")}:{" "}
+                      {chosen.performedBy || chosen.technician}
+                    </p>
+                    <p>
+                      {t("actualMinutes")}: {chosen.actualMinutes ?? "—"}
+                    </p>
+                    <p>{chosen.completedAt}</p>
+                    <small>{chosen.id}</small>
+                    {(
+                      chosen.usedItems ||
+                      Object.entries(chosen.actual).map(([key, n]) => ({
+                        name: key,
+                        partNumber: "",
+                        unit: "",
+                        ...(chosen.legacyReconstructed
+                          ? { name: key }
+                          : store.items.find((i) => i.id === key)),
+                        id: key,
+                        usedQuantity: n,
+                      }))
+                    ).map((item) => (
+                      <p key={item.id}>
+                        {item.name} · {item.partNumber}: {item.usedQuantity}{" "}
+                        {item.unit}
                       </p>
                     ))}
                   </div>
                 )}
               </>
             )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      <Dialog.Root
+        open={Boolean(historyAsset)}
+        onOpenChange={(open) => {
+          if (!open) setHistoryAsset(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="dialog-overlay" />
+          <Dialog.Content className="dialog">
+            <Dialog.Title>
+              {assetName(historyAsset || "")} · {t("maintenanceHistory")}
+            </Dialog.Title>
+            <Dialog.Description>{t("completed")}</Dialog.Description>
+            {!store.jobs.some(
+              (j) => j.assetId === historyAsset && j.status === "completed",
+            ) && <p>{t("noMaintenanceHistory")}</p>}
+            {store.jobs
+              .filter(
+                (j) => j.assetId === historyAsset && j.status === "completed",
+              )
+              .sort((a, b) =>
+                (b.completedAt || "").localeCompare(a.completedAt || ""),
+              )
+              .map((j) => (
+                <p key={j.id}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setHistoryAsset(null);
+                      setSelected(j.id);
+                    }}
+                  >
+                    {j.completedAt?.slice(0, 10)} · {j.name}
+                  </Button>
+                </p>
+              ))}
+            <Dialog.Close asChild>
+              <Button variant="outline">{t("close")}</Button>
+            </Dialog.Close>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

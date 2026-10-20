@@ -68,3 +68,32 @@ it("does not consume reserved stock", () => {
   s.items[1].reserved = 1;
   expect(() => completeJob(s, "j1", { i2: 1 }, "")).toThrow();
 });
+
+describe("durable completion details", () => {
+  it("captures tool and part metadata independently of later registry edits", () => {
+    const s = seed();
+    const done = completeJob(
+      s,
+      "j1",
+      { i1: 1, i2: 1 },
+      "Replaced bearing",
+      42,
+      "Actual technician",
+    );
+    done.items[0].name = "Renamed tool";
+    expect(done.jobs[0].usedItems?.[0].name).toBe(s.items[0].name);
+    expect(done.jobs[0].actualMinutes).toBe(42);
+    expect(done.jobs[0].performedBy).toBe("Actual technician");
+    expect(JSON.parse(JSON.stringify(done)).jobs[0].usedItems).toHaveLength(2);
+  });
+  it("recurring completion creates independent events without overwriting the previous run", () => {
+    const s = seed();
+    s.jobs[0].recurrence = 30;
+    const once = completeJob(s, "j1", {}, "First", 20);
+    const next = once.jobs.find((j) => !s.jobs.some((old) => old.id === j.id))!;
+    const twice = completeJob(once, next.id, {}, "Second", 30);
+    expect(twice.jobs.filter((j) => j.status === "completed")).toHaveLength(2);
+    expect(twice.jobs.find((j) => j.id === "j1")?.notes).toBe("First");
+    expect(twice.events).toHaveLength(2);
+  });
+});

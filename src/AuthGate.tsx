@@ -121,18 +121,33 @@ export default function AuthGate({
     try {
       const { data, error } = await client
         .from("memberships")
-        .select("organization_id")
+        .select("organization_id,is_default")
         .eq("user_id", session.user.id);
       if (error) throw error;
-      if (data?.length !== 1) throw Error("membership");
-      const repo = new Repository(client, data[0].organization_id);
+      const memberships = data || [];
+      const defaults = memberships.filter((m) => m.is_default);
+      const selected =
+        memberships.length === 1
+          ? memberships[0]
+          : defaults.length === 1
+            ? defaults[0]
+            : null;
+      if (!selected) throw Error("membership");
+      const repo = new Repository(client, selected.organization_id);
       const result = await repo.load();
       if (ticket === epoch.current) {
         repository.current = repo;
         setSnapshot(result);
       }
-    } catch {
-      if (ticket === epoch.current) setError(t("accessError"));
+    } catch (cause) {
+      if (ticket === epoch.current)
+        setError(
+          t(
+            cause instanceof Error && cause.message === "membership"
+              ? "organizationRequired"
+              : "accessError",
+          ),
+        );
     } finally {
       if (ticket === epoch.current) setLoading(false);
     }
