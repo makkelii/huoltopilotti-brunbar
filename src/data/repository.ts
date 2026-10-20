@@ -99,6 +99,7 @@ export class Repository {
         notes: completed.notes,
         actualMinutes: completed.actualMinutes,
         completionNotes: completed.completionNotes,
+        freeUsage: completed.freeUsage,
       };
     } else if (next.templateVersion !== before.templateVersion) {
       kind = "template";

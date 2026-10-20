@@ -1,3 +1,6 @@
+import { FreeUsageEditor } from "./FreeUsageEditor";
+import { MaintenanceHistory, historyDate } from "./MaintenanceHistory";
+import { validateFreeUsage, type FreeUsage } from "./completionUsage";
 import { Repository, type Snapshot, RepositoryError } from "./data/repository";
 import { supabase } from "./data/supabase";
 import { CompletionItems } from "./CompletionItems";
@@ -173,6 +176,7 @@ export default function App({
     [historyAsset, setHistoryAsset] = useState<string | null>(null),
     [actualMinutes, setActualMinutes] = useState(60),
     [completionNotes, setCompletionNotes] = useState(""),
+    [freeUsage, setFreeUsage] = useState<FreeUsage[]>([]),
     [notes, setNotes] = useState(""),
     [completion, setCompletion] = useState(false),
     [error, setError] = useState("");
@@ -416,9 +420,12 @@ export default function App({
     }
     if (ok) setModal(null);
   }
+  const finishing = useRef(false);
   async function finish() {
-    if (!chosen) return;
+    if (!chosen || finishing.current) return;
+    finishing.current = true;
     try {
+      const usage = validateFreeUsage(freeUsage);
       if (
         !(await change(
           repository
@@ -433,6 +440,7 @@ export default function App({
                         notes,
                         actualMinutes,
                         completionNotes,
+                        freeUsage: usage,
                       }
                     : job,
                 ),
@@ -445,15 +453,19 @@ export default function App({
                 actualMinutes,
                 userName,
                 completionNotes,
+                usage,
               ),
         ))
       )
         return;
       setCompletion(false);
+      setToast(t("completionSaved"));
       setSelected(null);
       setError("");
     } catch {
       setError(t("stockError"));
+    } finally {
+      finishing.current = false;
     }
   }
   function exportCsv() {
@@ -513,15 +525,7 @@ export default function App({
                   </span>
                   <span>
                     <strong>{labelJob(j)}</strong>
-                    <small>
-                      {assetName(j.assetId)}{" "}
-                      <span className="muted">
-                        ·{" "}
-                        {j.id.startsWith("j")
-                          ? "HT-00" + j.id.slice(1)
-                          : j.id.slice(0, 6)}
-                      </span>
-                    </small>
+                    <small>{assetName(j.assetId)} </small>
                     <small className="mobile-job-meta">
                       {new Date(j.due + "T12:00:00").toLocaleDateString(lang)} ·{" "}
                       {t(
@@ -1922,90 +1926,105 @@ export default function App({
           <Dialog.Content className="dialog job-dialog">
             <Dialog.Title>{chosen?.name}</Dialog.Title>
             <Dialog.Description className="dialog-description">
-              {chosen && assetName(chosen.assetId)} · {chosen?.technician} ·{" "}
-              {chosen?.duration} min
+              {chosen && (chosen.assetName || assetName(chosen.assetId))}
+              {chosen?.status !== "completed" && (
+                <>
+                  {" "}
+                  · {chosen?.technician} · {chosen?.duration} min
+                </>
+              )}
             </Dialog.Description>
             <Dialog.Close className="dialog-close" aria-label={t("close")}>
               <X size={20} />
             </Dialog.Close>
-            <p className="safety-notice">
-              <ShieldCheck size={22} />
-              {t("safe")}
-            </p>
+            {chosen?.status !== "completed" && (
+              <p className="safety-notice">
+                <ShieldCheck size={22} />
+                {t("safe")}
+              </p>
+            )}
             {chosen && (
               <>
-                <div className="section-heading">
-                  <h2>{t("readiness")}</h2>
-                  <span className="badge planned">{t(readiness(chosen))}</span>
-                </div>
-                {chosen.requirements.map((r) => {
-                  const item = (
-                    chosen.status === "completed"
-                      ? chosen.usedItems || []
-                      : store.items
-                  ).find((i) => i.id === r.itemId);
-                  return (
-                    <div className="requirement" key={r.id}>
-                      <div>
-                        <small>{t(r.category)}</small>
-                        <p>{local(r.label, lang)}</p>
-                        <small>
-                          {r.category !== "tools" && (
-                            <>
-                              {t("quantity")}: {r.quantity}
-                            </>
-                          )}
-                        </small>
-                        {item && (
-                          <small>
-                            {item.location} ·{" "}
-                            {item.type !== "tools" && (
-                              <>
-                                {t("quantity")}: {item.quantity} ·{" "}
-                              </>
-                            )}
-                            {item.spec}
-                            {item.calibration ? " · " + item.calibration : ""}
-                          </small>
-                        )}
-                      </div>
-                      <select
-                        aria-label={local(r.label, lang)}
-                        disabled={chosen.status === "completed"}
-                        value={r.state}
-                        onChange={(e) =>
-                          change({
-                            ...store,
-                            jobs: store.jobs.map((j) =>
-                              j.id === chosen.id
-                                ? {
-                                    ...j,
-                                    requirements: j.requirements.map((x) =>
-                                      x.id === r.id
-                                        ? {
-                                            ...x,
-                                            state: e.target
-                                              .value as typeof r.state,
-                                          }
-                                        : x,
-                                    ),
-                                  }
-                                : j,
-                            ),
-                          })
-                        }
-                      >
-                        {(
-                          ["unchecked", "ready", "needs", "review"] as const
-                        ).map((s) => (
-                          <option key={s} value={s}>
-                            {t(s)}
-                          </option>
-                        ))}
-                      </select>
+                {chosen.status !== "completed" && (
+                  <>
+                    <div className="section-heading">
+                      <h2>{t("readiness")}</h2>
+                      <span className="badge planned">
+                        {t(readiness(chosen))}
+                      </span>
                     </div>
-                  );
-                })}
+                    {chosen.requirements.map((r) => {
+                      const item = (
+                        chosen.status === "completed"
+                          ? chosen.usedItems || []
+                          : store.items
+                      ).find((i) => i.id === r.itemId);
+                      return (
+                        <div className="requirement" key={r.id}>
+                          <div>
+                            <small>{t(r.category)}</small>
+                            <p>{local(r.label, lang)}</p>
+                            <small>
+                              {r.category !== "tools" && (
+                                <>
+                                  {t("quantity")}: {r.quantity}
+                                </>
+                              )}
+                            </small>
+                            {item && (
+                              <small>
+                                {item.location} ·{" "}
+                                {item.type !== "tools" && (
+                                  <>
+                                    {t("quantity")}: {item.quantity} ·{" "}
+                                  </>
+                                )}
+                                {item.spec}
+                                {item.calibration
+                                  ? " · " + item.calibration
+                                  : ""}
+                              </small>
+                            )}
+                          </div>
+                          <select
+                            aria-label={local(r.label, lang)}
+                            disabled={chosen.status === "completed"}
+                            value={r.state}
+                            onChange={(e) =>
+                              change({
+                                ...store,
+                                jobs: store.jobs.map((j) =>
+                                  j.id === chosen.id
+                                    ? {
+                                        ...j,
+                                        requirements: j.requirements.map((x) =>
+                                          x.id === r.id
+                                            ? {
+                                                ...x,
+                                                state: e.target
+                                                  .value as typeof r.state,
+                                              }
+                                            : x,
+                                        ),
+                                      }
+                                    : j,
+                                ),
+                              })
+                            }
+                          >
+                            {(
+                              ["unchecked", "ready", "needs", "review"] as const
+                            ).map((s) => (
+                              <option key={s} value={s}>
+                                {t(s)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
                 {chosen.status !== "completed" && !completion && (
                   <div className="button-row">
                     <Button
@@ -2027,6 +2046,8 @@ export default function App({
                       onClick={() => {
                         setCompletion(true);
                         setCompletionNotes("");
+                        setNotes("");
+                        setFreeUsage([]);
                         setActualMinutes(chosen.duration);
                         setActual({});
                       }}
@@ -2045,6 +2066,14 @@ export default function App({
                   >
                     <h3>{t("actual")}</h3>
                     <label>
+                      {t("workDone")}
+                      <textarea
+                        required
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                      />
+                    </label>
+                    <label>
                       {t("actualMinutes")}
                       <input
                         type="number"
@@ -2057,21 +2086,21 @@ export default function App({
                         }
                       />
                     </label>
-                    <CompletionItems
+                    <FreeUsageEditor
                       lang={lang}
-                      actual={actual}
-                      onChange={setActual}
-                      search={searchCompletionInventory}
-                      requirements={chosen.requirements}
+                      value={freeUsage}
+                      onChange={setFreeUsage}
                     />
-                    <label>
-                      {t("notes")}
-                      <textarea
-                        required
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
+                    <details>
+                      <summary>{t("chooseFromRegistry")}</summary>
+                      <CompletionItems
+                        lang={lang}
+                        actual={actual}
+                        onChange={setActual}
+                        search={searchCompletionInventory}
+                        requirements={chosen.requirements}
                       />
-                    </label>
+                    </details>
                     <label>
                       {t("additionalNotes")}
                       <textarea
@@ -2079,60 +2108,25 @@ export default function App({
                         onChange={(e) => setCompletionNotes(e.target.value)}
                       />
                     </label>
-                    <p className="notice">{t("proposal")}</p>
+
                     {error && (
                       <p role="alert" className="danger-text">
                         {error}
                       </p>
                     )}
-                    <Button type="submit">{t("confirm")}</Button>
+                    <Button type="submit" disabled={saving}>
+                      {t("recordComplete")}
+                    </Button>
                   </form>
                 )}
                 {chosen.status === "completed" && (
-                  <div className="completion">
-                    <h3>{t("notes")}</h3>
-                    {chosen.legacyReconstructed && (
-                      <p className="notice">{t("legacyHistory")}</p>
-                    )}
-                    <p>{chosen.description}</p>
-                    <p>{chosen.notes}</p>
-                    {chosen.completionNotes && (
-                      <p>
-                        {t("additionalNotes")}: {chosen.completionNotes}
-                      </p>
-                    )}
-                    <h3>{t("actual")}</h3>
-                    <p>
-                      {t("performedBy")}:{" "}
-                      {chosen.performedBy || chosen.technician}
-                    </p>
-                    <p>
-                      {t("actualMinutes")}: {chosen.actualMinutes ?? "—"}
-                    </p>
-                    <p>{chosen.completedAt}</p>
-                    <small>{chosen.id}</small>
-                    {(
-                      chosen.usedItems ||
-                      Object.entries(chosen.actual).map(([key, n]) => ({
-                        name: key,
-                        partNumber: "",
-                        unit: "",
-                        type: undefined,
-                        ...(chosen.legacyReconstructed
-                          ? { name: key }
-                          : store.items.find((i) => i.id === key)),
-                        id: key,
-                        usedQuantity: n,
-                      }))
-                    ).map((item) => (
-                      <p key={item.id}>
-                        {item.name} · {item.partNumber}:{" "}
-                        {item.type === "tools"
-                          ? t("toolUsed")
-                          : `${item.usedQuantity} ${item.unit || ""}`}
-                      </p>
-                    ))}
-                  </div>
+                  <MaintenanceHistory
+                    job={chosen}
+                    asset={assetName(chosen.assetId)}
+                    items={store.items}
+                    members={snapshotRef.current?.members}
+                    lang={lang}
+                  />
                 )}
               </>
             )}
@@ -2171,7 +2165,7 @@ export default function App({
                       setSelected(j.id);
                     }}
                   >
-                    {j.completedAt?.slice(0, 10)} · {j.name}
+                    {historyDate(j.completedAt, lang)} · {j.name}
                   </Button>
                 </p>
               ))}
