@@ -1,3 +1,23 @@
+# Työkalujen saldottoman käytön täydentävä tarkistus (20.10.2026)
+
+Main sisälsi jo PR #3:n työkalukorjaukset. Niiden päälle lisättiin yksikkökentän
+piilotus työkalulta, raportin työkalumerkinnän ja historiatilannekuvan käyttö sekä
+`adjust_stock`-RPC:n työkalukielto. Taulurakenteita tai vanhoja tietoja ei muutettu.
+
+Paikallisesti ajettiin lint, typecheck, build, verify:build, **74 Vitest-testiä**,
+**36 integraatiotestiä** (osajoukko), **16 Playwright-testiä** työpöytä-/mobiilinäkymissä
+ja **12 deployment-suojaustestiä**. `npm run test:db` asentaa migraatiot 001–005
+erilliseen PostgreSQL 16 -konttiin. Se tarkistaa nykyisten tenant-, historia- ja
+samanaikaisuustestien lisäksi suoran työkalun saldo-oikaisun eston molemmilla
+etumerkeillä, hylätyn kutsun atomisuuden, kielletyn sisäisen RPC:n sekä sallittujen
+varaosa-/kulutustarvikeoikaisujen roolirajat ja yrityseristyksen.
+
+HTTP-vastaukset selaintesteissä ovat mockattuja. Tuotannon Supabasea, asennettua
+migraatiotilannetta tai julkaisua ei testattu tai muutettu. Käyttöönoton tarkka
+järjestys on [TOOLS_WITHOUT_STOCK.md](TOOLS_WITHOUT_STOCK.md)-ohjeessa.
+
+---
+
 # Valmistumislomakkeen hakupäivitys (20.10.2026)
 
 Ajetut tarkistukset: `npm run lint`, `npm run typecheck`, `npm test` (**70 testiä**), `npm run test:integration` (**33**, yksikkötestien osajoukko), `npm run build`, `npm run verify:build`, `npm run test:deployment` (**12**) ja `npm run test:db` (erillinen PostgreSQL 16). `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` läpäisi **16 testiä** työpöytä- ja mobiilinäkymissä.

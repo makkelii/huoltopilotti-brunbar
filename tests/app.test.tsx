@@ -152,3 +152,50 @@ it("creates a tool without quantity and hides stock columns for tools", async ()
     screen.queryByRole("columnheader", { name: "Varaukset" }),
   ).not.toBeInTheDocument();
 });
+
+it("preserves a legacy tool's metadata and internal values when editing without stock or unit fields", async () => {
+  const { seed } = await import("../src/seed");
+  const { within } = await import("@testing-library/react");
+  const data = seed();
+  Object.assign(data.items[0], { unit: "legacy unit", reserved: 1 });
+  localStorage.setItem("huoltopilotti-demo-v1", JSON.stringify(data));
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Varasto ja työkalut" }));
+  const row = screen.getByRole("row", { name: /Momenttiavain T-014/ });
+  fireEvent.click(within(row).getByRole("button", { name: "Muokkaa" }));
+  const form = within(screen.getByRole("dialog"));
+  expect(form.queryByLabelText("Määrä")).not.toBeInTheDocument();
+  expect(form.queryByLabelText("Yksikkö")).not.toBeInTheDocument();
+  fireEvent.change(form.getByLabelText("Nimi"), {
+    target: { value: "Edited legacy wrench" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Tallenna" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  const saved = JSON.parse(localStorage.getItem("huoltopilotti-demo-v1")!)
+    .items[0];
+  expect(saved).toMatchObject({
+    name: "Edited legacy wrench",
+    quantity: 2,
+    reserved: 1,
+    unit: "legacy unit",
+    partNumber: "T-014",
+    calibration: "2027-01-01",
+    location: "A-01",
+  });
+});
+
+it("reports tools as use, with immutable snapshot names, rather than consumed quantities", async () => {
+  const { seed } = await import("../src/seed");
+  const { completeJob } = await import("../src/domain");
+  const data = completeJob(seed(), "j1", { i1: 1, i2: 1 }, "Completed");
+  data.items[0].name = "Renamed current wrench";
+  localStorage.setItem("huoltopilotti-demo-v1", JSON.stringify(data));
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Raportit" }));
+  expect(screen.getByText(/Momenttiavain T-014: Käytetty/)).toBeInTheDocument();
+  expect(screen.queryByText(/Momenttiavain T-014: 1/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Renamed current wrench/)).not.toBeInTheDocument();
+  expect(screen.getByText(/SKF 6205-2RS: 1/)).toBeInTheDocument();
+});
