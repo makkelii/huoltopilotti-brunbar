@@ -83,7 +83,8 @@ export default function App({
     orgId = initialSnapshot?.organizationId || "demo",
     organizationName = initialSnapshot?.organizationName || "Nordic Works Oy";
   const snapshotRef = useRef(initialSnapshot),
-    savingRef = useRef(false);
+    savingRef = useRef(false),
+    inviteLock = useRef(false);
   const canManage =
     !live ||
     ["owner", "administrator"].includes(snapshotRef.current?.role || "");
@@ -165,6 +166,7 @@ export default function App({
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("active"),
     [inventoryType, setInventoryType] = useState("all"),
+    [inventoryStatus, setInventoryStatus] = useState("active"),
     [itemType, setItemType] = useState<Item["type"]>("tools"),
     [dark, setDark] = useState(localStorage.getItem("hp-theme") === "dark"),
     [mobile, setMobile] = useState(false),
@@ -254,6 +256,16 @@ export default function App({
     window.addEventListener("hashchange", apply);
     return () => window.removeEventListener("hashchange", apply);
   }, []);
+  const inventoryRows = store.items.filter(
+    (i) =>
+      (inventoryType === "all" || i.type === inventoryType) &&
+      (inventoryStatus === "all" ||
+        (inventoryStatus === "inactive" ? !!i.inactive : !i.inactive)) &&
+      [i.name, i.spec, i.manufacturer, i.partNumber, i.location]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(query.trim().toLocaleLowerCase()),
+  );
   const change = async (
     next: Store,
     lifecycle?: LifecycleRequest,
@@ -979,8 +991,12 @@ export default function App({
               <div className="search-field">
                 <Search size={18} />
                 <input
-                  aria-label={t("search")}
-                  placeholder={t("search")}
+                  aria-label={t(
+                    page === "inventory" ? "inventorySearch" : "search",
+                  )}
+                  placeholder={t(
+                    page === "inventory" ? "inventorySearch" : "search",
+                  )}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -1123,8 +1139,23 @@ export default function App({
               }}
             />
           )}
+          {live &&
+            !canManage &&
+            ["assets", "inventory", "settings"].includes(page) && (
+              <p className="notice" role="status">
+                {t("managerPermissionHint")}
+              </p>
+            )}
+          {live &&
+            snapshotRef.current?.role === "viewer" &&
+            page === "jobs" && (
+              <p className="notice" role="status">
+                {t("viewerPermissionHint")}
+              </p>
+            )}
           {page === "inventory" && (
             <div className="card table-scroll">
+              <p className="notice">{t("inventoryWorkflowHint")}</p>
               <label>
                 {t("type")}{" "}
                 <select
@@ -1138,6 +1169,20 @@ export default function App({
                   ))}
                 </select>
               </label>
+              <label>
+                {t("status")}{" "}
+                <select
+                  value={inventoryStatus}
+                  onChange={(e) => setInventoryStatus(e.target.value)}
+                >
+                  <option value="active">{t("activeInventory")}</option>
+                  <option value="all">{t("all")}</option>
+                  <option value="inactive">{t("inactive")}</option>
+                </select>
+              </label>
+              {!inventoryRows.length && (
+                <p role="status">{t("inventoryEmpty")}</p>
+              )}
               <table>
                 <thead>
                   <tr>
@@ -1152,8 +1197,9 @@ export default function App({
                     ]
                       .filter(
                         (k) =>
-                          inventoryType !== "tools" ||
-                          !["quantity", "reservation"].includes(k),
+                          (canManage || k !== "edit") &&
+                          (inventoryType !== "tools" ||
+                            !["quantity", "reservation"].includes(k)),
                       )
                       .map((k) => (
                         <th key={k}>{t(k as Key)}</th>
@@ -1161,49 +1207,40 @@ export default function App({
                   </tr>
                 </thead>
                 <tbody>
-                  {store.items
-                    .filter(
-                      (i) =>
-                        inventoryType === "all" || i.type === inventoryType,
-                    )
-                    .filter((i) =>
-                      (i.name + " " + i.spec)
-                        .toLowerCase()
-                        .includes(query.toLowerCase()),
-                    )
-                    .map((i) => (
-                      <tr key={i.id}>
-                        <td>
-                          <strong>{i.name}</strong>
-                          {i.inactive && <small>{t("inactive")}</small>}
-                          <small>
-                            {i.manufacturer} · {i.partNumber}
-                          </small>
-                        </td>
-                        <td>{t(i.type)}</td>
-                        {inventoryType !== "tools" && (
-                          <>
-                            <td>
-                              {i.type !== "tools" && (
-                                <span
-                                  className={
-                                    i.quantity - i.reserved < 2
-                                      ? "danger-text"
-                                      : ""
-                                  }
-                                >
-                                  {i.quantity}
-                                </span>
-                              )}
-                            </td>
-                            <td>{i.type !== "tools" && i.reserved}</td>
-                          </>
-                        )}
-                        <td>{i.location}</td>
-                        <td>
-                          {i.spec}
-                          <small>{i.calibration}</small>
-                        </td>
+                  {inventoryRows.map((i) => (
+                    <tr key={i.id}>
+                      <td>
+                        <strong>{i.name}</strong>
+                        {i.inactive && <small>{t("inactive")}</small>}
+                        <small>
+                          {i.manufacturer} · {i.partNumber}
+                        </small>
+                      </td>
+                      <td>{t(i.type)}</td>
+                      {inventoryType !== "tools" && (
+                        <>
+                          <td>
+                            {i.type !== "tools" && (
+                              <span
+                                className={
+                                  i.quantity - i.reserved < 2
+                                    ? "danger-text"
+                                    : ""
+                                }
+                              >
+                                {i.quantity}
+                              </span>
+                            )}
+                          </td>
+                          <td>{i.type !== "tools" && i.reserved}</td>
+                        </>
+                      )}
+                      <td>{i.location}</td>
+                      <td>
+                        {i.spec}
+                        <small>{i.calibration}</small>
+                      </td>
+                      {canManage && (
                         <td>
                           <Button
                             variant="outline"
@@ -1212,8 +1249,9 @@ export default function App({
                             {t("edit")}
                           </Button>
                         </td>
-                      </tr>
-                    ))}
+                      )}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -1477,7 +1515,8 @@ export default function App({
                       <form
                         onSubmit={async (e) => {
                           e.preventDefault();
-                          if (!supabase) return;
+                          if (!supabase || inviteLock.current) return;
+                          inviteLock.current = true;
                           setSaving(true);
                           setInviteStatus("");
                           try {
@@ -1496,6 +1535,7 @@ export default function App({
                           } catch {
                             setInviteStatus(t("inviteError"));
                           } finally {
+                            inviteLock.current = false;
                             setSaving(false);
                           }
                         }}
@@ -1509,7 +1549,9 @@ export default function App({
                             onChange={(e) => setInviteEmail(e.target.value)}
                           />
                         </label>
-                        <Button type="submit">{t("invite")}</Button>
+                        <Button type="submit" disabled={saving}>
+                          {t("invite")}
+                        </Button>
                         <p role="status">{inviteStatus}</p>
                       </form>
                     )}

@@ -16,6 +16,19 @@ export default defineConfig({
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     {
+      name: "android",
+      use: { ...devices["Pixel 7"], defaultBrowserType: "chromium" },
+    },
+    // CSS navigation switches at 760px; the tablet uses the wider navigation.
+    {
+      name: "tablet",
+      use: {
+        ...devices["iPad Mini"],
+        isMobile: false,
+        defaultBrowserType: "chromium",
+      },
+    },
+    {
       name: "mobile",
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
     },
