@@ -108,7 +108,10 @@ test("real SDK login, database read/write contract, reload persistence and sign-
   await page.getByRole("button", { name: "Aloitetaan" }).click();
   if (isMobile) await page.getByRole("button", { name: "Valikko" }).click();
   await expect(
-    page.getByText("Private browser workshop", { exact: true }),
+    (isMobile
+      ? page.getByRole("dialog")
+      : page.getByRole("complementary")
+    ).getByText("Private browser workshop", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("CNC Haas VF-2", { exact: true }),

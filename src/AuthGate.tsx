@@ -248,7 +248,12 @@ export default function AuthGate({
         key={session.user.id + snapshot.organizationId}
         initialSnapshot={snapshot}
         repository={repository.current}
-        userName={session.user.email || session.user.id}
+        userName={
+          snapshot.members.find((member) => member.userId === session.user.id)
+            ?.name ||
+          session.user.email ||
+          t("unknownPerformer")
+        }
         onSignOut={signOut}
       />
     );

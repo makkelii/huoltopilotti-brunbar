@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests e2e",
     "test": "vitest run",
-    "test:integration": "vitest run tests/app.test.tsx tests/auth.test.tsx tests/repository.test.ts tests/completion-items.test.tsx tests/inventory-search.test.ts tests/free-usage.test.tsx",
+    "test:integration": "vitest run tests/app.test.tsx tests/auth.test.tsx tests/repository.test.ts tests/completion-items.test.tsx tests/inventory-search.test.ts tests/free-usage.test.tsx tests/dashboard.test.tsx",
     "test:e2e": "playwright test",
     "test:db": "bash scripts/test-db.sh",
     "verify:build": "node scripts/verify-root-build.mjs",

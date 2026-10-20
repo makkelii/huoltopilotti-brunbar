@@ -1,3 +1,6 @@
+import { Dashboard } from "./Dashboard";
+import { workshopDate } from "./dashboard";
+import { AppNavigation, isPage, type Page } from "./AppNavigation";
 import {
   MaintenanceHistory,
   completionTime,
@@ -17,20 +20,14 @@ import {
 } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
-  LayoutDashboard,
   Box,
   Wrench,
-  Package,
   Radio,
   BarChart3,
-  Settings,
   ChevronRight,
+  Factory,
   Plus,
   Search,
-  ArrowUpRight,
-  Check,
-  Clock,
-  AlertTriangle,
   ArrowRight,
   Sun,
   Moon,
@@ -39,11 +36,7 @@ import {
   BookOpen,
   ShieldCheck,
   Download,
-  HelpCircle,
-  Factory,
-  ChevronDown,
   CheckCircle2,
-  CalendarDays,
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { translate, local, type Lang, type Key } from "./i18n";
@@ -61,24 +54,6 @@ import {
   type Job,
   type Item,
 } from "./domain";
-type Page =
-  | "dashboard"
-  | "assets"
-  | "jobs"
-  | "inventory"
-  | "radar"
-  | "reports"
-  | "templates"
-  | "settings";
-const nav: { page: Page; icon: typeof Box }[] = [
-  { page: "dashboard", icon: LayoutDashboard },
-  { page: "assets", icon: Box },
-  { page: "jobs", icon: Wrench },
-  { page: "inventory", icon: Package },
-  { page: "radar", icon: Radio },
-  { page: "templates", icon: BookOpen },
-  { page: "reports", icon: BarChart3 },
-];
 const storeKey = "huoltopilotti-demo-v1";
 export default function App({
   initialSnapshot,
@@ -212,6 +187,13 @@ export default function App({
       return () => clearTimeout(timer);
     }
   }, [toast]);
+  useEffect(() => {
+    const closeDesktopMenu = () => {
+      if (window.innerWidth > 760) setMobile(false);
+    };
+    window.addEventListener("resize", closeDesktopMenu);
+    return () => window.removeEventListener("resize", closeDesktopMenu);
+  }, []);
   const go = (p: Page) => {
     setPage(p);
     setQuery("");
@@ -222,8 +204,7 @@ export default function App({
   useEffect(() => {
     const apply = () => {
       const p = location.hash.slice(1);
-      if ([...nav.map((n) => n.page), "settings"].includes(p))
-        setPage(p as Page);
+      if (isPage(p)) setPage(p);
     };
     apply();
     window.addEventListener("hashchange", apply);
@@ -301,12 +282,9 @@ export default function App({
     setError("");
   };
   const active = store.jobs.filter((j) => j.status !== "completed"),
-    today = new Date().toLocaleDateString("sv-SE");
+    today = workshopDate();
   const overdue = active.filter((j) => j.due < today);
   const chosen = store.jobs.find((j) => j.id === selected);
-  const low = store.items.filter(
-    (i) => i.type !== "tools" && !i.inactive && i.quantity - i.reserved < 2,
-  );
   const filteredJobs = store.jobs.filter(
     (j) =>
       (filter === "all" ||
@@ -595,107 +573,67 @@ export default function App({
         </div>
       )}
       <a className="skip" href="#main">
-        {t("dashboard")}
+        {t("skipContent")}
       </a>
-      <aside className={mobile ? "sidebar open" : "sidebar"}>
-        <a className="brand" href="#dashboard" onClick={() => go("dashboard")}>
-          <span className="brand-mark">
-            <Wrench size={23} />
-          </span>
-          huoltopilotti<span className="brand-period">.</span>
-        </a>
-        <button className="workspace" onClick={() => go("settings")}>
-          <span className="workspace-icon">
-            <Factory size={19} />
-          </span>
-          <span>
-            <strong>{organizationName}</strong>
-            <small>
-              {t("demo")}
-              {!live ? " · Business" : ""}
-            </small>
-          </span>
-          <ChevronDown size={15} />
-        </button>
-        <div className="nav-label">
-          {lang === "fi"
-            ? "TYÖTILA"
-            : lang === "de"
-              ? "ARBEITSBEREICH"
-              : "WORKSPACE"}
-        </div>
-        <nav>
-          {nav.map((n) => (
-            <button
-              key={n.page}
-              onClick={() => go(n.page)}
-              className={page === n.page ? "nav-item active" : "nav-item"}
-            >
-              <n.icon size={19} />
-              {t(n.page)}
-              {n.page === "jobs" && (
-                <span className="nav-count">{active.length}</span>
-              )}
-              {n.page === "radar" && <span className="new-dot" />}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="demo-card">
-            <span className="demo-tag">
-              <span />
-              {t("demo")}
-            </span>
-            <p>{t("demoText")}</p>
-            <button onClick={() => setModal("help")}>
-              {t("help")} <ArrowUpRight size={14} />
-            </button>
-          </div>
-          <button className="nav-item" onClick={() => go("settings")}>
-            <Settings size={19} />
-            {t("settings")}
-          </button>
-          <button className="profile" onClick={() => go("settings")}>
-            <span className="avatar">{initials}</span>
-            <span>
-              <strong>{userName}</strong>
-              <small>{t(initialSnapshot?.role || "technician")}</small>
-            </span>
-            <ChevronDown size={15} />
-          </button>
-        </div>
-      </aside>
-      {mobile && (
-        <button
-          aria-label={t("close")}
-          className="scrim"
-          onClick={() => setMobile(false)}
+      <aside className="sidebar">
+        <AppNavigation
+          page={page}
+          lang={lang}
+          organizationName={organizationName}
+          userName={userName}
+          role={snapshotRef.current?.role || "technician"}
+          live={live}
+          onNavigate={go}
+          onHelp={() => setModal("help")}
         />
-      )}
+      </aside>
       <div className="main-shell">
         <header className="topbar">
-          <button
-            className="icon-button mobile-menu"
-            aria-label={t("menu")}
-            aria-expanded={mobile}
-            onClick={() => setMobile(!mobile)}
-          >
-            <Menu size={22} />
-          </button>
+          <Dialog.Root open={mobile} onOpenChange={setMobile}>
+            <Dialog.Trigger asChild>
+              <button
+                className="icon-button mobile-menu"
+                aria-label={t("menu")}
+              >
+                <Menu size={22} />
+              </button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="navigation-overlay" />
+              <Dialog.Content className="mobile-navigation">
+                <Dialog.Title className="sr-only">
+                  {t("primaryNavigation")}
+                </Dialog.Title>
+                <Dialog.Description className="sr-only">
+                  {t("navigationHelp")}
+                </Dialog.Description>
+                <AppNavigation
+                  mobile
+                  page={page}
+                  lang={lang}
+                  organizationName={organizationName}
+                  userName={userName}
+                  role={snapshotRef.current?.role || "technician"}
+                  live={live}
+                  onNavigate={go}
+                  onHelp={() => {
+                    setMobile(false);
+                    setModal("help");
+                  }}
+                />
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
           <div className="breadcrumb">
-            {lang === "fi"
-              ? "Työtila"
-              : lang === "de"
-                ? "Arbeitsbereich"
-                : "Workspace"}{" "}
-            <ChevronRight size={13} />
             <strong>{t(page)}</strong>
           </div>
           <div className="top-actions">
-            <span className="demo-pill">
-              <span />
-              {t("demo")}
-            </span>
+            {!live && (
+              <span className="demo-pill">
+                <span />
+                {t("demo")}
+              </span>
+            )}
             <select
               aria-label={t("language")}
               value={lang}
@@ -724,25 +662,25 @@ export default function App({
                       weekday: "long",
                       day: "numeric",
                       month: "long",
+                      timeZone: "Europe/Helsinki",
                     })
                   : organizationName.toUpperCase()}
               </div>
-              <h1>
-                {page === "dashboard"
-                  ? live
-                    ? userName
-                    : t("hello")
-                  : t(page)}
-                {page === "dashboard" && <span className="heading-dot">.</span>}
-              </h1>
+              <h1>{t(page)}</h1>
               <p>
                 {page === "dashboard"
-                  ? t("intro")
+                  ? t("dashboardIntro")
                   : page === "radar"
                     ? t("radarText")
                     : page === "inventory"
-                      ? t("readinessText")
-                      : t("demoText")}
+                      ? t("inventoryIntro")
+                      : page === "assets"
+                        ? t("assetsIntro")
+                        : page === "jobs"
+                          ? t("jobsIntro")
+                          : page === "settings"
+                            ? t("settingsIntro")
+                            : t("workspaceTools")}
               </p>
             </div>
             {page === "radar" && (
@@ -756,268 +694,51 @@ export default function App({
                 {t("newFault")}
               </Button>
             )}
-            {page !== "radar" && page !== "settings" && (
-              <Button
-                onClick={() =>
-                  page === "assets"
-                    ? open("asset")
+            {page !== "radar" &&
+              page !== "settings" &&
+              (!live || snapshotRef.current?.role !== "viewer") && (
+                <Button
+                  onClick={() =>
+                    page === "assets"
+                      ? open("asset")
+                      : page === "inventory"
+                        ? open("item")
+                        : page === "reports"
+                          ? exportCsv()
+                          : open("job")
+                  }
+                >
+                  <Plus size={17} />
+                  {page === "assets"
+                    ? t("newAsset")
                     : page === "inventory"
-                      ? open("item")
+                      ? t("addItem")
                       : page === "reports"
-                        ? exportCsv()
-                        : open("job")
-                }
-              >
-                <Plus size={17} />
-                {page === "assets"
-                  ? t("newAsset")
-                  : page === "inventory"
-                    ? t("addItem")
-                    : page === "reports"
-                      ? t("export")
-                      : t("newJob")}
-              </Button>
-            )}
+                        ? t("export")
+                        : t("newJob")}
+                </Button>
+              )}
           </div>
+          {error && !selected && !modal && (
+            <p role="alert" className="global-error">
+              {error}
+            </p>
+          )}
           {page === "dashboard" && (
-            <>
-              <div className="stats-grid">
-                {[
-                  {
-                    label: "upcoming",
-                    value: active.length,
-                    icon: CalendarDays,
-                    detail: "week",
-                    class: "green",
-                    action: () => go("jobs"),
-                  },
-                  {
-                    label: "overdue",
-                    value: overdue.length,
-                    icon: Clock,
-                    detail: "attention",
-                    class: "orange",
-                    action: () => {
-                      go("jobs");
-                      setFilter("overdue");
-                    },
-                  },
-                  {
-                    label: "assets",
-                    value: store.assets.length,
-                    icon: Box,
-                    detail: "operational",
-                    class: "blue",
-                    action: () => go("assets"),
-                  },
-                  {
-                    label: "missing",
-                    value: low.length,
-                    icon: Package,
-                    detail: "low",
-                    class: "purple",
-                    action: () => go("inventory"),
-                  },
-                ].map((s) => (
-                  <button
-                    className="stat-card"
-                    key={s.label}
-                    onClick={s.action}
-                  >
-                    <div className="stat-top">
-                      <span>{t(s.label as Key)}</span>
-                      <span className={"stat-icon " + s.class}>
-                        <s.icon size={19} />
-                      </span>
-                    </div>
-                    <strong className="stat-value">
-                      {s.value.toString().padStart(2, "0")}
-                    </strong>
-                    <div className="stat-bottom">
-                      <span className={s.class}>
-                        {s.class === "orange" ? (
-                          <span className="dot" />
-                        ) : (
-                          <span className="mini-line" />
-                        )}
-                        {t(s.detail as Key)}
-                      </span>
-                      <ArrowUpRight size={16} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <div className="dashboard-layout">
-                <section className="card jobs-card">
-                  <div className="section-heading">
-                    <div>
-                      <h2>
-                        {t("upcoming")}{" "}
-                        <span className="count">{active.length}</span>
-                      </h2>
-                      <p>
-                        {lang === "fi"
-                          ? "Pidä tärkeimmät työt liikkeessä."
-                          : lang === "de"
-                            ? "Die wichtigsten Aufgaben im Blick."
-                            : "Keep your most important work moving."}
-                      </p>
-                    </div>
-                    <button className="text-button" onClick={() => go("jobs")}>
-                      {t("all")}
-                      <ArrowRight size={15} />
-                    </button>
-                  </div>
-                  {jobTable(active.slice(0, 4))}
-                  <button className="card-footer" onClick={() => go("jobs")}>
-                    {t("jobs")}
-                    <ArrowRight size={15} />
-                  </button>
-                </section>
-                <section className="readiness-card">
-                  <div className="readiness-heading">
-                    <span className="readiness-symbol">
-                      <ShieldCheck size={23} />
-                    </span>
-                    <span className="live-dot" />
-                  </div>
-                  <h2>{t("readiness")}</h2>
-                  <p>{t("readinessText")}</p>
-                  <div className="readiness-meter">
-                    <strong>
-                      {active.filter((j) => readiness(j) === "ready").length}
-                      <small> / {active.length}</small>
-                    </strong>
-                    <span>{t("ready").toLowerCase()}</span>
-                  </div>
-                  <div className="progress-track">
-                    <span
-                      style={{
-                        width: `${active.length ? (active.filter((j) => readiness(j) === "ready").length / active.length) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="readiness-summary">
-                    <span>
-                      <span className="dot amber-dot" />
-                      {t("needs")}
-                    </span>
-                    <b>
-                      {active.filter((j) => readiness(j) === "needs").length}
-                    </b>
-                  </div>
-                  <div className="readiness-summary">
-                    <span>
-                      <span className="dot gray-dot" />
-                      {t("unchecked")}
-                    </span>
-                    <b>
-                      {
-                        active.filter(
-                          (j) =>
-                            readiness(j) !== "ready" &&
-                            readiness(j) !== "needs",
-                        ).length
-                      }
-                    </b>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (!active.length) {
-                        go("jobs");
-                        return;
-                      }
-                      setSelected(active[0].id);
-                      setCompletion(false);
-                    }}
-                  >
-                    {t("preparation")}
-                    <ArrowRight size={17} />
-                  </button>
-                </section>
-              </div>
-              <div className="bottom-grid">
-                <section className="card radar-card">
-                  <div className="radar-art">
-                    <Radio size={32} />
-                    <span />
-                    <i />
-                  </div>
-                  <div>
-                    <span className="eyebrow">
-                      {lang === "fi"
-                        ? "RATKAISU LÖYTYY HISTORIASTA"
-                        : lang === "de"
-                          ? "AUS ERFAHRUNG LERNEN"
-                          : "LET HISTORY HELP"}
-                    </span>
-                    <h2>{t("radar")}</h2>
-                    <p>{t("radarText")}</p>
-                    <button className="text-button" onClick={() => go("radar")}>
-                      {t("tryRadar")}
-                      <ArrowRight size={15} />
-                    </button>
-                  </div>
-                </section>
-                <section className="card activity-card">
-                  <div className="section-heading">
-                    <h2>{t("recent")}</h2>
-                    <span className="activity-dot" />
-                  </div>
-                  {store.events.length ? (
-                    store.events.slice(0, 2).map((e) => (
-                      <div className="activity" key={e.id}>
-                        <span className="activity-icon">
-                          <Check size={16} />
-                        </span>
-                        <div>
-                          <strong>{e.text}</strong>
-                          <small>
-                            {t("completed")} ·{" "}
-                            {new Date(e.at).toLocaleDateString(lang)}
-                          </small>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="activity">
-                      <span className="activity-icon">
-                        <Wrench size={16} />
-                      </span>
-                      <div>
-                        <strong>{store.jobs[1]?.name || t("empty")}</strong>
-                        <small>
-                          {store.jobs[1] ? t(store.jobs[1].status) : t("empty")}{" "}
-                          · {t("demo")}
-                        </small>
-                      </div>
-                    </div>
-                  )}
-                  <div className="activity">
-                    <span className="activity-icon amber">
-                      <AlertTriangle size={16} />
-                    </span>
-                    <div>
-                      <strong>
-                        {low.length
-                          ? t("low") + ": " + low[0].name
-                          : t("empty")}
-                      </strong>
-                      <small>
-                        {low[0]?.location || "—"} · {t("demo")}
-                      </small>
-                    </div>
-                  </div>
-                </section>
-              </div>
-              <div className="dashboard-foot">
-                <span>
-                  <span className="dot" />
-                  {t("demoText")}
-                </span>
-                <span>Huoltopilotti · 0.1</span>
-              </div>
-            </>
+            <Dashboard
+              store={store}
+              userName={userName}
+              today={today}
+              lang={lang}
+              onOpen={(job) => {
+                setSelected(job.id);
+                setCompletion(false);
+                setActual({});
+                setNotes(job.notes);
+                setError("");
+              }}
+              onAll={() => go("jobs")}
+            />
           )}
           {(page === "jobs" || page === "assets" || page === "inventory") && (
             <div className="toolbar">
@@ -1066,11 +787,7 @@ export default function App({
                       <span className={"badge " + a.status}>{t(a.status)}</span>
                     </div>
                     <div className="asset-info">
-                      <small>
-                        {a.id.startsWith("a")
-                          ? "EQ-00" + a.id.slice(1)
-                          : a.id.slice(0, 8)}
-                      </small>
+                      <small>{a.serial || a.model || t("equipment")}</small>
                       <h2>{a.name}</h2>
                       <p>
                         {a.manufacturer} · {a.model}
@@ -1236,7 +953,12 @@ export default function App({
                     ({ fault, terms }) => (
                       <article className="card padded match" key={fault.id}>
                         <span className="badge operational">
-                          {fault.id} · {fault.date} · {t("demo")}
+                          {t("confirmedRecord")} ·{" "}
+                          {Number.isFinite(Date.parse(fault.date))
+                            ? new Intl.DateTimeFormat(lang, {
+                                timeZone: "Europe/Helsinki",
+                              }).format(new Date(fault.date))
+                            : "—"}
                         </span>
                         <h2>{assetName(fault.assetId)}</h2>
                         <p>{local(fault.symptoms, lang)}</p>
@@ -1381,8 +1103,22 @@ export default function App({
           )}
           {page === "settings" && (
             <div className="settings-grid">
+              <section className="card padded workspace-tools">
+                <h2>{t("workspaceTools")}</h2>
+                <p>{t("workspaceToolsHint")}</p>
+                <div className="button-row">
+                  <Button variant="outline" onClick={() => go("reports")}>
+                    <BarChart3 size={17} />
+                    {t("reports")}
+                  </Button>
+                  <Button variant="outline" onClick={() => go("templates")}>
+                    <BookOpen size={17} />
+                    {t("templates")}
+                  </Button>
+                </div>
+              </section>
               <section className="card padded">
-                <h2>{t("settings")}</h2>
+                <h2>{t("preferences")}</h2>
                 <label>
                   {t("language")}
                   <select
@@ -2176,18 +1912,6 @@ export default function App({
           {toast}
         </div>
       )}
-      {error && !selected && (
-        <div className="toast" role="alert">
-          {error}
-        </div>
-      )}
-      <button
-        className="help-fab"
-        aria-label={t("help")}
-        onClick={() => setModal("help")}
-      >
-        <HelpCircle size={21} />
-      </button>
     </div>
   );
 }

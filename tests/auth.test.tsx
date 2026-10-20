@@ -307,3 +307,15 @@ it("uses only the database-assigned default for a multi-organization user", asyn
   await screen.findByText("Private Workshop");
   expect(f.rpc).toHaveBeenCalledWith("private_snapshot", { p_org: "org-one" });
 });
+
+it("prefers the current membership display name over email in the workspace", async () => {
+  const f = fixture({
+    user: { id: "user-one", email: "owner@example.invalid" },
+  } as Session);
+  const named = structuredClone(empty);
+  named.members[0].name = "Sanna Asentaja";
+  f.rpc.mockResolvedValue({ data: named, error: null });
+  render(<AuthGate client={f.client} isConfigured />);
+  expect(await screen.findByText("Sanna Asentaja")).toBeInTheDocument();
+  expect(screen.queryByText("owner@example.invalid")).not.toBeInTheDocument();
+});
