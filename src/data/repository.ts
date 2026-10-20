@@ -1,3 +1,10 @@
+import type {
+  HistoryFilter,
+  HistoryKind,
+  HistoryOptions,
+  HistoryPage,
+} from "./historySearch";
+import type { Job, Fault } from "../domain";
 import type { LifecycleRequest } from "../lifecycle";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -74,6 +81,41 @@ export class Repository {
       items: items.slice(0, inventoryPageSize),
       hasMore: items.length > inventoryPageSize,
     };
+  }
+  async searchHistory(
+    filter: HistoryFilter,
+    signal: AbortSignal,
+  ): Promise<HistoryPage> {
+    const { data, error } = await this.client
+      .rpc("private_history_search", {
+        p_org: this.organizationId,
+        p_query: filter.query,
+        p_asset: filter.assetId || null,
+        p_line: filter.lineId || null,
+        p_from: filter.from || null,
+        p_to: filter.to || null,
+        p_kind: filter.kind || null,
+        p_page: filter.page,
+      })
+      .abortSignal(signal);
+    if (error) throw new RepositoryError(error.code || "search");
+    return data as HistoryPage;
+  }
+  async historyRecord(kind: HistoryKind, id: string): Promise<Job | Fault> {
+    const { data, error } = await this.client.rpc("private_history_record", {
+      p_org: this.organizationId,
+      p_kind: kind,
+      p_id: id,
+    });
+    if (error) throw new RepositoryError(error.code || "history");
+    return data as Job | Fault;
+  }
+  async historyOptions(): Promise<HistoryOptions> {
+    const { data, error } = await this.client.rpc("private_history_options", {
+      p_org: this.organizationId,
+    });
+    if (error) throw new RepositoryError(error.code || "search");
+    return data as HistoryOptions;
   }
   async load(): Promise<Snapshot> {
     const { data, error } = await this.client.rpc("private_snapshot", {

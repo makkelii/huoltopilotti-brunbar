@@ -1,5 +1,64 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  knowledgeTitle: [
+    "Kunnossapidon tietopankki",
+    "Maintenance knowledge base",
+    "Wartungswissensbank",
+  ],
+  knowledgeDisclaimer: [
+    "Haku etsii yrityksesi aiempia tapauksia. Osuma ei ole diagnoosi tai varma korjausratkaisu. Noudata hyväksyttyjä ohjeita.",
+    "Search previous cases in your organization. A match is not a diagnosis or guaranteed repair. Follow approved instructions.",
+    "Suchen Sie frühere Fälle Ihrer Firma. Ein Treffer ist keine Diagnose oder sichere Reparatur. Befolgen Sie freigegebene Anweisungen.",
+  ],
+  knowledgePlaceholder: [
+    "Esimerkiksi taajuusmuuttaja ylivirta käynnistys",
+    "For example drive overcurrent startup",
+    "Zum Beispiel Umrichter Überstrom Start",
+  ],
+  knowledgeFilters: [
+    "Rajaa historiatietoja",
+    "Filter history",
+    "Historie filtern",
+  ],
+  historicalLine: [
+    "Historiallinen tuotantolinja",
+    "Historical production line",
+    "Historische Produktionslinie",
+  ],
+  fromDate: ["Alkaen", "From", "Von"],
+  toDate: ["Asti", "Through", "Bis"],
+  faultRecords: ["Vikailmoitukset", "Fault records", "Fehlermeldungen"],
+  knowledgeFailed: [
+    "Historian haku tai avaaminen epäonnistui. Tarkista yhteys ja yritä uudelleen.",
+    "History search or opening failed. Check your connection and retry.",
+    "Suche oder Öffnen fehlgeschlagen. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+  ],
+  knowledgeEmpty: [
+    "Ei aiempia tapauksia näillä rajauksilla. Kokeile lyhyempää hakusanaa tai poista suodattimia.",
+    "No previous cases with these filters. Try a shorter search term or remove filters.",
+    "Keine früheren Fälle mit diesen Filtern. Kürzen Sie den Suchbegriff oder entfernen Sie Filter.",
+  ],
+  unknownHistoricalPlacement: [
+    "Vanhan tapahtuman tunnistetiedot tai suoritushetken sijoitus ovat puutteelliset. Laitenimi voi perustua nykyiseen rekisteriin. Nykyistä sijoitusta ei väitetä historialliseksi.",
+    "Identity or placement at the time of this old event is incomplete. The equipment name may come from the current registry. Current placement is not treated as historical.",
+    "Historische Identität oder Zuordnung unvollständig. Der Anlagenname kann aus dem aktuellen Register stammen. Die aktuelle Zuordnung gilt nicht als historisch.",
+  ],
+  knowledgeMatch: [
+    "Hakua vastaavat kentät",
+    "Matching fields",
+    "Passende Felder",
+  ],
+  knowledgeCombinedFields: [
+    "Useita historian kenttiä",
+    "Combined history fields",
+    "Kombinierte Historienfelder",
+  ],
+  openOriginalHistory: [
+    "Avaa alkuperäinen kirjaus",
+    "Open original record",
+    "Originaleintrag öffnen",
+  ],
+
   repeatMaintenance: [
     "Tee sama huolto uudelleen",
     "Repeat this maintenance",

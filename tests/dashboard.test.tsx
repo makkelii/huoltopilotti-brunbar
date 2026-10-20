@@ -184,7 +184,7 @@ it("keeps six primary destinations and preserves templates, reports and legacy d
   expect(location.hash).toBe("#reports");
 });
 
-it("keeps technical asset and fault identifiers out of normal screens", () => {
+it("keeps technical asset and fault identifiers out of normal screens", async () => {
   localStorage.setItem("hp-welcome", "1");
   const store = seed();
   const assetId = "12345678-1234-1234-1234-123456789012";
@@ -200,8 +200,6 @@ it("keeps technical asset and fault identifiers out of normal screens", () => {
     target: { value: "Moottori pysähtyy" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Etsi historiasta" }));
-  expect(
-    screen.getByText("Vahvistettu havainto", { exact: false }),
-  ).toBeInTheDocument();
+  expect(await screen.findByText(store.faults[0].cause[0])).toBeInTheDocument();
   expect(container).not.toHaveTextContent(faultId);
 });

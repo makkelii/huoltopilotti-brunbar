@@ -924,3 +924,31 @@ main {
   margin: 0;
   min-width: 0;
 }
+.knowledge-search {
+  display: grid;
+  gap: 20px;
+}
+.knowledge-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.knowledge-results article {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.knowledge-results dd {
+  margin: 4px 0 14px;
+  white-space: pre-wrap;
+}
+.knowledge-results article > .button {
+  margin-top: 16px;
+}
+.knowledge-results > .button-row {
+  grid-column: 1/-1;
+}
+@media (max-width: 760px) {
+  .knowledge-results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
