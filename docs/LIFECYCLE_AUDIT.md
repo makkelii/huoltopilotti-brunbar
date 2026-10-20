@@ -37,8 +37,11 @@ arkistoituun linjaan ei palata hiljaisesti. Tunnisteristiriita estää linjan pa
 
 ## Rajattu muiden rekisterien auditointi
 
-- Varastossa on `inactive`-tuki ja käytön estot, mutta yhtenäinen arkisto/palautus/
-  poisto ei ole kattavasti tarjolla käyttöliittymässä. Jatkokehitys erillisessä PR:ssä.
+- Varastossa on `inactive`-tuki ja käytön estot. Nimikkeen muokkauksen **Poistettu
+  käytöstä** -valinnalla voi poistaa osan/työkalun käytöstä ja palauttaa sen poistamalla
+  valinnan. Valintaruutu esitäytetään nykyisestä tilasta, joten tavallinen muokkaus ei
+  palauta nimikettä hiljaisesti aktiiviseksi. Erillinen arkistolista ja pysyvä poistaminen
+  eivät ole tarjolla; yhtenäistäminen on jatkokehitystä erillisessä PR:ssä.
 - Varastoerän pysyvä poisto vaatii kulutus-, vaade- ja auditointiriippuvuuksien erillisen
   suunnitelman; tätä ei toteuteta laitepoiston sivuvaikutuksena.
 - Kesken olevan työn peruuttaminen vaatii uuden tilan, roolit, syyn ja toiston
