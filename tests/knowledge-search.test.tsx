@@ -170,3 +170,79 @@ it("repository always scopes search and original-record reads by its own organiz
   });
   expect(abortSignal).toHaveBeenCalledWith(controller.signal);
 });
+it("locks source loading and ignores a source response after the query changes", async () => {
+  const api = service();
+  let resolve!: (value: ReturnType<typeof completeJob>["jobs"][number]) => void;
+  api.record = vi.fn(
+    () =>
+      new Promise<ReturnType<typeof completeJob>["jobs"][number]>((r) => {
+        resolve = r;
+      }),
+  );
+  render(
+    <KnowledgeSearch
+      service={api}
+      store={seed()}
+      lang="fi"
+      canWork
+      onRepeat={vi.fn()}
+      onAsset={vi.fn()}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText("Kuvaus"), {
+    target: { value: "moottori" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Etsi historiasta" }));
+  const open = await screen.findByRole("button", {
+    name: "Avaa alkuperäinen kirjaus",
+  });
+  fireEvent.click(open);
+  fireEvent.click(open);
+  expect(api.record).toHaveBeenCalledTimes(1);
+  expect(open).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Kuvaus"), {
+    target: { value: "toinen vika" },
+  });
+  resolve(completeJob(seed(), "j1", {}, "Laakeri vaihdettu", 20).jobs[0]);
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Etsi historiasta" }));
+  expect(
+    await screen.findByRole("button", { name: "Avaa alkuperäinen kirjaus" }),
+  ).not.toBeDisabled();
+});
+it("retries failed filter options and clears filters while retaining the query", async () => {
+  const api = service();
+  api.options = vi
+    .fn()
+    .mockRejectedValueOnce(Error("offline"))
+    .mockResolvedValue({
+      assets: [{ value: "a2", label: "Vanha moottori" }],
+      lines: [],
+    });
+  render(
+    <KnowledgeSearch
+      service={api}
+      store={seed()}
+      lang="fi"
+      canWork={false}
+      onRepeat={vi.fn()}
+      onAsset={vi.fn()}
+    />,
+  );
+  fireEvent.click(screen.getByText("Rajaa historiatietoja"));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Yritä uudelleen" }),
+  );
+  await screen.findByRole("option", { name: "Vanha moottori" });
+  fireEvent.change(screen.getByRole("combobox", { name: "Laite" }), {
+    target: { value: "a2" },
+  });
+  fireEvent.change(screen.getByLabelText("Kuvaus"), {
+    target: { value: "moottori" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Tyhjennä rajaukset" }));
+  expect(screen.getByRole("combobox", { name: "Laite" })).toHaveValue("");
+  expect(screen.getByLabelText("Kuvaus")).toHaveValue("moottori");
+});

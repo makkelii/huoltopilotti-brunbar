@@ -3,11 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "./components/ui/button";
 import { SearchSelect } from "./EquipmentPicker";
 import type { Asset, ProductionLine, Store } from "./domain";
-import {
-  assetDeletable,
-  lineDeletable,
-  type LifecycleRequest,
-} from "./lifecycle";
+import type { LifecycleRequest } from "./lifecycle";
 import { translate, type Lang } from "./i18n";
 export function LifecycleActions({
   entity,
@@ -27,9 +23,7 @@ export function LifecycleActions({
   errorMessage?: string;
 }) {
   const t = (k: Parameters<typeof translate>[1]) => translate(lang, k);
-  const [action, setAction] = useState<"archive" | "restore" | "delete" | null>(
-      null,
-    ),
+  const [action, setAction] = useState<"archive" | "restore" | null>(null),
     [busy, setBusy] = useState(false),
     [failed, setFailed] = useState(false),
     [lineId, setLineId] = useState("");
@@ -40,16 +34,10 @@ export function LifecycleActions({
           (j) => j.assetId === entity.id && j.status !== "completed",
         ).length
       : 0;
-  const deletable =
-    type === "asset"
-      ? assetDeletable(store, entity as Asset)
-      : lineDeletable(store, entity as ProductionLine);
   const title =
-    action === "delete"
-      ? t("deletePermanently")
-      : action === "restore"
-        ? t(type === "asset" ? "restoreAsset" : "restoreLine")
-        : t("archiveAsset");
+    action === "restore"
+      ? t(type === "asset" ? "restoreAsset" : "restoreLine")
+      : t("archiveAsset");
   const begin = (a: typeof action) => {
     setFailed(false);
     setAction(a);
@@ -88,13 +76,11 @@ export function LifecycleActions({
             </Dialog.Description>
             <p>
               {t(
-                action === "delete"
-                  ? "deleteExplanation"
-                  : action === "restore"
-                    ? type === "asset"
-                      ? "restoreAssetExplanation"
-                      : "restoreLineExplanation"
-                    : "archiveAssetExplanation",
+                action === "restore"
+                  ? type === "asset"
+                    ? "restoreAssetExplanation"
+                    : "restoreLineExplanation"
+                  : "archiveAssetExplanation",
               )}
             </p>
             {action === "archive" && openJobs > 0 && (
@@ -120,11 +106,7 @@ export function LifecycleActions({
             )}
             <div className="button-row">
               <Button
-                disabled={
-                  busy ||
-                  (action === "archive" && openJobs > 0) ||
-                  (action === "delete" && !deletable)
-                }
+                disabled={busy || (action === "archive" && openJobs > 0)}
                 onClick={async () => {
                   if (lock.current || !action) return;
                   lock.current = true;

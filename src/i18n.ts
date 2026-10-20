@@ -615,6 +615,38 @@ const words = {
     "External system ID",
     "Externe System-ID",
   ],
+  managerPermissionHint: [
+    "Rekistereitä ja käyttäjiä hallitsee yrityksen omistaja tai ylläpitäjä. Pyydä muutosta häneltä.",
+    "An owner or administrator manages registers and members. Ask them to make changes.",
+    "Register und Mitglieder verwaltet der Inhaber oder Administrator. Bitte ihn um Änderungen.",
+  ],
+  viewerPermissionHint: [
+    "Sinulla on katseluoikeus. Huoltotöiden luonti ja suorittaminen edellyttää asentajan tai ylläpitäjän oikeuksia.",
+    "You have read access. Creating and completing work requires technician or manager access.",
+    "Du hast Leserechte. Zum Erstellen und Abschließen von Arbeiten sind Techniker- oder Verwaltungsrechte erforderlich.",
+  ],
+  inventorySearch: [
+    "Hae nimellä, tuotekoodilla tai sijainnilla…",
+    "Search by name, part number or location…",
+    "Nach Name, Artikelnummer oder Lagerort suchen…",
+  ],
+  activeInventory: ["Käytössä", "Active", "Aktiv"],
+  inventoryWorkflowHint: [
+    "Rekisteri on valinnainen: voit kirjata tarvikkeet ja työkalut myös itse huollon valmistuessa. Suunnittelu ei vähennä saldoja. Vain toteutunut rekisteritarvikkeiden käyttö vähentää saldoa; työkaluilla ei ole saldoseurantaa.",
+    "The register is optional: enter supplies and tools manually when completing work. Planning never consumes stock. Only actual registered supply use reduces stock; tools have no stock tracking.",
+    "Das Register ist optional: Material und Werkzeuge können beim Abschluss frei erfasst werden. Planung verbraucht keinen Bestand. Nur tatsächlicher registrierter Materialverbrauch reduziert den Bestand; Werkzeuge haben keine Bestandsführung.",
+  ],
+  inventoryEmpty: [
+    "Ei hakua ja rajauksia vastaavia nimikkeitä. Muuta hakua tai valitse kaikki tilat.",
+    "No items match your search and filters. Change the search or select all statuses.",
+    "Keine passenden Artikel. Ändere die Suche oder wähle alle Status.",
+  ],
+  clearHistoryFilters: [
+    "Tyhjennä rajaukset",
+    "Clear filters",
+    "Filter zurücksetzen",
+  ],
+  retryHistory: ["Yritä uudelleen", "Retry", "Erneut versuchen"],
   inactive: ["Poistettu käytöstä", "Inactive", "Außer Betrieb"],
   maintenanceHistory: [
     "Huoltohistoria",

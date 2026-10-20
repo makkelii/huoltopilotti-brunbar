@@ -45,28 +45,36 @@ export function KnowledgeSearch({
     [options, setOptions] = useState<HistoryOptions>({ assets: [], lines: [] }),
     [loading, setLoading] = useState(false),
     [error, setError] = useState(false),
+    [optionsError, setOptionsError] = useState(false),
+    [optionsRetry, setOptionsRetry] = useState(0),
+    [opening, setOpening] = useState<string | null>(null),
     [submitted, setSubmitted] = useState<HistoryFilter | null>(null),
     [record, setRecord] = useState<{
       row: HistoryResult;
       data: Job | Fault;
     } | null>(null);
   const generation = useRef(0),
-    recordGeneration = useRef(0);
+    recordGeneration = useRef(0),
+    openingLock = useRef(false);
   useEffect(() => {
     let active = true;
+    openingLock.current = false;
+    setOpening(null);
+    setRecord(null);
+    setOptionsError(false);
     service
       .options()
       .then((o) => {
         if (active) setOptions(o);
       })
       .catch(() => {
-        if (active) setError(true);
+        if (active) setOptionsError(true);
       });
     return () => {
       active = false;
       recordGeneration.current++;
     };
-  }, [service]);
+  }, [service, optionsRetry]);
   useEffect(() => {
     if (!submitted) return;
     const ticket = ++generation.current;
@@ -89,6 +97,9 @@ export function KnowledgeSearch({
   }, [service, submitted]);
   function update(next: Partial<HistoryFilter>) {
     generation.current++;
+    recordGeneration.current++;
+    openingLock.current = false;
+    setOpening(null);
     setFilter({ ...filter, ...next, page: 0 });
     setResult(null);
     setSubmitted(null);
@@ -97,6 +108,9 @@ export function KnowledgeSearch({
   }
   function search(page = 0) {
     generation.current++;
+    recordGeneration.current++;
+    openingLock.current = false;
+    setOpening(null);
     setResult(null);
     setError(false);
     setLoading(true);
@@ -126,6 +140,18 @@ export function KnowledgeSearch({
           />
           <details>
             <summary>{t("knowledgeFilters")}</summary>
+            {optionsError && (
+              <div role="alert">
+                {t("knowledgeFailed")}{" "}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOptionsRetry((n) => n + 1)}
+                >
+                  {t("retryHistory")}
+                </Button>
+              </div>
+            )}
             <div className="form-grid">
               <SearchSelect
                 lang={lang}
@@ -174,6 +200,15 @@ export function KnowledgeSearch({
                 </select>
               </label>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                update({ assetId: "", lineId: "", from: "", to: "", kind: "" })
+              }
+            >
+              {t("clearHistoryFilters")}
+            </Button>
           </details>
           <Button
             type="submit"
@@ -183,6 +218,7 @@ export function KnowledgeSearch({
           </Button>
         </form>
         {loading && <p role="status">{t("loading")}</p>}
+        {opening && <p role="status">{t("loading")}</p>}
         {error && <p role="alert">{t("knowledgeFailed")}</p>}
       </section>
       <section
@@ -227,19 +263,19 @@ export function KnowledgeSearch({
             )}
             <dl>
               <dt>{t("symptoms")}</dt>
-              <dd>{row.problem || "—"}</dd>
+              <dd>{preview(row.problem)}</dd>
               <dt>{t("workDone")}</dt>
-              <dd>{row.repair || "—"}</dd>
+              <dd>{preview(row.repair)}</dd>
               {row.parts && (
                 <>
                   <dt>{t("usedSupplies")}</dt>
-                  <dd>{row.parts}</dd>
+                  <dd>{preview(row.parts)}</dd>
                 </>
               )}
               {row.tools && (
                 <>
                   <dt>{t("usedTools")}</dt>
-                  <dd>{row.tools}</dd>
+                  <dd>{preview(row.tools)}</dd>
                 </>
               )}
             </dl>
@@ -261,8 +297,11 @@ export function KnowledgeSearch({
             </small>
             <Button
               variant="outline"
-              disabled={loading}
+              disabled={loading || opening !== null}
               onClick={async () => {
+                if (openingLock.current) return;
+                openingLock.current = true;
+                setOpening(`${row.kind}-${row.id}`);
                 const ticket = ++recordGeneration.current;
                 setError(false);
                 try {
@@ -271,6 +310,11 @@ export function KnowledgeSearch({
                     setRecord({ row, data });
                 } catch {
                   if (recordGeneration.current === ticket) setError(true);
+                } finally {
+                  if (recordGeneration.current === ticket) {
+                    openingLock.current = false;
+                    setOpening(null);
+                  }
                 }
               }}
             >
@@ -366,4 +410,8 @@ export function KnowledgeSearch({
       </Dialog.Root>
     </div>
   );
+}
+
+function preview(value: string) {
+  return value.length > 500 ? `${value.slice(0, 500)}…` : value || "—";
 }
