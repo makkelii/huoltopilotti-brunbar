@@ -425,9 +425,13 @@ export default function App({
       (!onlyMine || j.technician === userName) &&
       (!onlyOverdue || (j.due < today && j.status !== "completed")) &&
       (!listAsset || j.assetId === listAsset) &&
-      store.assets.some(
+      (store.assets.some(
         (a) => a.id === j.assetId && inEquipmentScope(a, listScope),
-      ) &&
+      ) ||
+        (j.status === "completed" &&
+          listScope === "all" &&
+          !listAsset &&
+          store.removedAssets?.some((a) => a.id === j.assetId))) &&
       (j.name + " " + store.assets.find((a) => a.id === j.assetId)?.name)
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -437,7 +441,9 @@ export default function App({
     return names[j.id] ? t(names[j.id]) : j.name;
   };
   const assetName = (assetId: string) =>
-    store.assets.find((a) => a.id === assetId)?.name || "—";
+    [...store.assets, ...(store.removedAssets || [])].find(
+      (a) => a.id === assetId,
+    )?.name || "—";
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget),
@@ -693,7 +699,7 @@ export default function App({
                       )}
                     </strong>
                     <small>
-                      {assetName(j.assetId)}{" "}
+                      {j.assetName || assetName(j.assetId)}{" "}
                       {store.assets.find((a) => a.id === j.assetId)?.archivedAt
                         ? ` · ${t("archived")}`
                         : ""}
@@ -2087,6 +2093,12 @@ export default function App({
                   ))}
               </div>
             )}
+            {chosen &&
+              store.removedAssets?.some((a) => a.id === chosen.assetId) && (
+                <p className="notice">
+                  {t("removedFromRegistry")} · {assetName(chosen.assetId)}
+                </p>
+              )}
             {chosen?.status !== "completed" && (
               <p className="safety-notice">
                 <ShieldCheck size={22} />

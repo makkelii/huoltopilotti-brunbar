@@ -37,6 +37,15 @@ docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/te
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/tool_stock_guard.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/free_usage.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/production_lines.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/registry_upgrade_setup.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200011_registry_retirement.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/registry_upgrade_assert.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/registry_retirement.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/history.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/free_usage.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/planned_requirements.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/repeat_maintenance.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/history_search.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-setup.sql
 mkdir -p work/db-tests
 (docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-owner.sql > work/db-tests/owner.log 2>&1) &
@@ -87,3 +96,20 @@ fi
 grep -q 'stale revision' work/db-tests/lifecycle-*.log
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/lifecycle-concurrency-assert.sql
 echo "PostgreSQL lifecycle, role, dependency and concurrent archive/job tests passed"
+
+# Registry removal and restoration must never both succeed at the same revision.
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/registry-concurrency-setup.sql
+(docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/registry-concurrency-remove_registry.sql > work/db-tests/registry-remove.log 2>&1) &
+registry_remove_process=$!
+(docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/registry-concurrency-restore.sql > work/db-tests/registry-restore.log 2>&1) &
+registry_restore_process=$!
+registry_remove_result=0; registry_restore_result=0
+wait "$registry_remove_process" || registry_remove_result=$?
+wait "$registry_restore_process" || registry_restore_result=$?
+if { [ "$registry_remove_result" -eq 0 ] && [ "$registry_restore_result" -eq 0 ]; } || { [ "$registry_remove_result" -ne 0 ] && [ "$registry_restore_result" -ne 0 ]; }; then
+  cat work/db-tests/registry-remove.log work/db-tests/registry-restore.log
+  echo "Expected exactly one registry removal/restoration to succeed"; exit 1
+fi
+grep -q 'stale revision' work/db-tests/registry-*.log
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/registry-concurrency-assert.sql
+echo "PostgreSQL registry preservation and concurrent removal/restoration tests passed"

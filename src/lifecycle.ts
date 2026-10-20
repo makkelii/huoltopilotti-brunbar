@@ -1,6 +1,8 @@
 import type { Asset, ProductionLine, Store } from "./domain";
 import { archiveProductionLine } from "./productionLines";
 export type LifecycleKind =
+  | "asset_remove_registry"
+  | "production_line_remove_registry"
   | "asset_archive"
   | "asset_restore"
   | "asset_delete"
@@ -9,7 +11,7 @@ export type LifecycleKind =
   | "production_line_delete";
 export type LifecycleRequest = {
   kind: LifecycleKind;
-  data: { id: string; productionLineId?: string | null };
+  data: { id: string; productionLineId?: string | null; confirmation?: string };
 };
 export function assetDeletable(store: Store, asset: Asset) {
   return (
@@ -29,8 +31,51 @@ export function lineDeletable(store: Store, line: ProductionLine) {
     !store.assets.some((a) => a.productionLineId === line.id)
   );
 }
+export function confirmationIdentifier(entity: Asset | ProductionLine) {
+  return (
+    ("serial" in entity ? entity.serial.trim() : entity.identifier.trim()) ||
+    entity.name.trim()
+  );
+}
 export function applyLifecycle(store: Store, request: LifecycleRequest): Store {
   const { kind, data } = request;
+  if (
+    kind === "asset_remove_registry" ||
+    kind === "production_line_remove_registry"
+  ) {
+    const isAsset = kind === "asset_remove_registry";
+    const entity = isAsset
+      ? store.assets.find((a) => a.id === data.id)
+      : store.archivedProductionLines?.find((l) => l.id === data.id);
+    if (!entity?.archivedAt || entity.registryRemovedAt)
+      throw Error("unavailable");
+    if (data.confirmation?.trim() !== confirmationIdentifier(entity))
+      throw Error("confirmation");
+    if (
+      isAsset &&
+      store.jobs.some((j) => j.assetId === data.id && j.status !== "completed")
+    )
+      throw Error("openJobs");
+    if (!isAsset && store.assets.some((a) => a.productionLineId === data.id))
+      throw Error("dependencies");
+    const removed = { ...entity, registryRemovedAt: new Date().toISOString() };
+    return isAsset
+      ? {
+          ...store,
+          assets: store.assets.filter((a) => a.id !== data.id),
+          removedAssets: [...(store.removedAssets || []), removed as Asset],
+        }
+      : {
+          ...store,
+          archivedProductionLines: store.archivedProductionLines?.filter(
+            (l) => l.id !== data.id,
+          ),
+          removedProductionLines: [
+            ...(store.removedProductionLines || []),
+            removed as ProductionLine,
+          ],
+        };
+  }
   if (kind === "production_line_archive") {
     const line = store.productionLines?.find((l) => l.id === data.id);
     if (!line) throw Error("unavailable");
@@ -51,6 +96,11 @@ export function applyLifecycle(store: Store, request: LifecycleRequest): Store {
     if (!asset) throw Error("unavailable");
     if (kind === "asset_delete") {
       if (!assetDeletable(store, asset)) throw Error("dependencies");
+      if (
+        !asset.archivedAt ||
+        data.confirmation?.trim() !== confirmationIdentifier(asset)
+      )
+        throw Error("unavailable");
       return { ...store, assets: store.assets.filter((a) => a.id !== data.id) };
     }
     if (kind === "asset_archive") {
@@ -96,6 +146,11 @@ export function applyLifecycle(store: Store, request: LifecycleRequest): Store {
   if (!line) throw Error("unavailable");
   if (kind === "production_line_delete") {
     if (!lineDeletable(store, line)) throw Error("dependencies");
+    if (
+      !line.archivedAt ||
+      data.confirmation?.trim() !== confirmationIdentifier(line)
+    )
+      throw Error("unavailable");
     return {
       ...store,
       productionLines: store.productionLines?.filter((l) => l.id !== line.id),
