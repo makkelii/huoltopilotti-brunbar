@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { LifecycleActions } from "./LifecycleActions";
+import type { LifecycleRequest } from "./lifecycle";
+import { useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,7 +14,7 @@ import { completionTime, historyName } from "./MaintenanceHistory";
 import type { Asset, Job, ProductionLine, Store } from "./domain";
 import { translate, type Lang } from "./i18n";
 
-type View = "all" | "lines" | "unassigned";
+type View = "all" | "lines" | "unassigned" | "archivedAssets" | "archivedLines";
 export function AssetsWorkspace({
   store,
   lang,
@@ -30,6 +32,8 @@ export function AssetsWorkspace({
   canWork = false,
   target,
   onResetTarget,
+  onLifecycle,
+  lifecycleError,
 }: {
   store: Store;
   lang: Lang;
@@ -46,15 +50,32 @@ export function AssetsWorkspace({
   onCreateJob?: (assetId?: string, lineId?: string) => void;
   canWork?: boolean;
   onResetTarget?: () => void;
+  onLifecycle?: (request: LifecycleRequest) => Promise<boolean>;
+  lifecycleError?: string;
   target?: { assetId?: string; lineId?: string } | null;
 }) {
   const t = (key: Parameters<typeof translate>[1]) => translate(lang, key);
-  const [view, setView] = useState<View>("all");
+  const [view, setView] = useState<View>(
+    store.archivedProductionLines?.some((l) => l.id === target?.lineId)
+      ? "archivedLines"
+      : store.assets.some((a) => a.id === target?.assetId && a.archivedAt)
+        ? "archivedAssets"
+        : "all",
+  );
+  const [assetFocus, setAssetFocus] = useState(target?.assetId || null);
   const [lineId, setLineId] = useState<string | null>(target?.lineId || null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [detail, setDetail] = useState<"assets" | "open" | "history">("assets");
-  const lines = store.productionLines || [];
-  const line = lines.find((entry) => entry.id === lineId);
+  const [archiving, setArchiving] = useState(false);
+  const archiveLock = useRef(false);
+  const lines =
+    view === "archivedLines"
+      ? store.archivedProductionLines || []
+      : store.productionLines || [];
+  const line = [
+    ...(store.productionLines || []),
+    ...(store.archivedProductionLines || []),
+  ].find((entry) => entry.id === lineId);
   const term = query.trim().toLocaleLowerCase();
   const matches = (...values: (string | undefined)[]) =>
     values.join(" ").toLocaleLowerCase().includes(term);
@@ -79,7 +100,9 @@ export function AssetsWorkspace({
           (asset) => view !== "unassigned" || !asset.productionLineId,
         )
   ).filter((asset) => {
-    if (target?.assetId && !lineId && asset.id !== target.assetId) return false;
+    if (view === "archivedAssets" ? !asset.archivedAt : !!asset.archivedAt)
+      return false;
+    if (assetFocus && !lineId && asset.id !== assetFocus) return false;
     const group = lines.find((entry) => entry.id === asset.productionLineId);
     return matches(
       asset.name,
@@ -92,6 +115,12 @@ export function AssetsWorkspace({
   function chooseLine(id: string) {
     onClearSearch?.();
     setLineId(id);
+    setAssetFocus(null);
+    setView(
+      store.archivedProductionLines?.some((l) => l.id === id)
+        ? "archivedLines"
+        : "lines",
+    );
     setConfirmArchive(false);
     setDetail("assets");
   }
@@ -116,7 +145,7 @@ export function AssetsWorkspace({
                   {asset.serial && <small>{asset.serial}</small>}
                 </div>
                 <span className={`badge ${asset.status}`}>
-                  {t(asset.status)}
+                  {t(asset.archivedAt ? "archived" : asset.status)}
                 </span>
               </div>
               <div className="equipment-context">
@@ -158,7 +187,7 @@ export function AssetsWorkspace({
                 </dl>
               </details>
               <div className="equipment-actions">
-                {canWork && onCreateJob && (
+                {canWork && !asset.archivedAt && onCreateJob && (
                   <Button
                     onClick={() =>
                       onCreateJob(asset.id, asset.productionLineId || undefined)
@@ -171,12 +200,22 @@ export function AssetsWorkspace({
                   {t("history")}
                   <ArrowRight size={15} aria-hidden="true" />
                 </Button>
-                {canManage && (
+                {canManage && !asset.archivedAt && (
                   <Button variant="ghost" onClick={() => onEditAsset(asset)}>
                     {t("edit")}
                   </Button>
                 )}
               </div>
+              {canManage && onLifecycle && (
+                <LifecycleActions
+                  entity={asset}
+                  type="asset"
+                  store={store}
+                  lang={lang}
+                  onAction={onLifecycle}
+                  errorMessage={lifecycleError}
+                />
+              )}
             </section>
           );
         })}
@@ -200,7 +239,7 @@ export function AssetsWorkspace({
     );
   return (
     <div className="assets-workspace">
-      {target?.assetId && (
+      {assetFocus && (
         <Button variant="outline" onClick={onResetTarget}>
           {t("allEquipment")}
         </Button>
@@ -212,13 +251,22 @@ export function AssetsWorkspace({
             role="group"
             aria-label={t("equipmentViews")}
           >
-            {(["all", "lines", "unassigned"] as const).map((key) => (
+            {(
+              [
+                "all",
+                "lines",
+                "unassigned",
+                "archivedAssets",
+                "archivedLines",
+              ] as const
+            ).map((key) => (
               <Button
                 key={key}
                 variant={view === key ? "default" : "outline"}
                 aria-pressed={view === key}
                 onClick={() => {
                   setView(key);
+                  setAssetFocus(null);
                   setLineId(null);
                 }}
               >
@@ -227,7 +275,9 @@ export function AssetsWorkspace({
                     ? "allEquipment"
                     : key === "lines"
                       ? "productionLines"
-                      : "withoutProductionLine",
+                      : key === "unassigned"
+                        ? "withoutProductionLine"
+                        : key,
                 )}
               </Button>
             ))}
@@ -247,13 +297,13 @@ export function AssetsWorkspace({
             onClick={() => {
               setLineId(null);
               setConfirmArchive(false);
-              setView("lines");
+              setView(line.archivedAt ? "archivedLines" : "lines");
             }}
           >
             <ArrowLeft size={16} />
             {t("productionLines")}
           </button>
-          {canWork && onCreateJob && (
+          {canWork && !line.archivedAt && onCreateJob && (
             <Button onClick={() => onCreateJob(undefined, line.id)}>
               {t("newJob")}
             </Button>
@@ -267,7 +317,10 @@ export function AssetsWorkspace({
                 {line.identifier && <small>{line.identifier}</small>}
                 <h2>{line.name}</h2>
               </div>
-              {canManage && (
+              {line.archivedAt && (
+                <span className="badge">{t("archived")}</span>
+              )}
+              {canManage && !line.archivedAt && (
                 <Button variant="outline" onClick={() => onEditLine(line)}>
                   {t("editProductionLine")}
                 </Button>
@@ -296,7 +349,7 @@ export function AssetsWorkspace({
                 <dd>{history.length}</dd>
               </div>
             </dl>
-            {canManage && (
+            {canManage && !line.archivedAt && (
               <div className="line-management">
                 <Button
                   variant="outline"
@@ -316,16 +369,26 @@ export function AssetsWorkspace({
             {confirmArchive && (
               <div className="archive-line-confirm" role="alert">
                 <p>
+                  {line.name} · {openJobs.length} {t("openMaintenance")} ·{" "}
                   {t("archiveLineExplanation")} ({lineAssets.length}{" "}
                   {t("assets").toLowerCase()})
                 </p>
                 <div className="button-row">
                   <Button
+                    disabled={archiving}
                     onClick={async () => {
-                      if (await onArchiveLine(line)) {
-                        setLineId(null);
-                        setConfirmArchive(false);
-                        setView("lines");
+                      if (archiveLock.current) return;
+                      archiveLock.current = true;
+                      setArchiving(true);
+                      try {
+                        if (await onArchiveLine(line)) {
+                          setLineId(null);
+                          setConfirmArchive(false);
+                          setView("lines");
+                        }
+                      } finally {
+                        archiveLock.current = false;
+                        setArchiving(false);
                       }
                     }}
                   >
@@ -333,12 +396,30 @@ export function AssetsWorkspace({
                   </Button>
                   <Button
                     variant="outline"
+                    disabled={archiving}
                     onClick={() => setConfirmArchive(false)}
                   >
                     {t("cancel")}
                   </Button>
                 </div>
               </div>
+            )}
+            {canManage && onLifecycle && (
+              <LifecycleActions
+                entity={line}
+                type="production_line"
+                errorMessage={lifecycleError}
+                store={store}
+                lang={lang}
+                onAction={async (request) => {
+                  const ok = await onLifecycle(request);
+                  if (ok) {
+                    setLineId(null);
+                  }
+                  return ok;
+                }}
+                showArchive={false}
+              />
             )}
           </section>
           <div
@@ -427,7 +508,7 @@ export function AssetsWorkspace({
             </section>
           )}
         </>
-      ) : view === "lines" ? (
+      ) : view === "lines" || view === "archivedLines" ? (
         <>
           {lines.filter((entry) =>
             matches(
@@ -464,6 +545,7 @@ export function AssetsWorkspace({
                     >
                       <Factory size={24} aria-hidden="true" />
                       <span>
+                        {entry.archivedAt && <small>{t("archived")}</small>}
                         {entry.identifier && <small>{entry.identifier}</small>}
                         <strong>{entry.name}</strong>
                         {entry.location && <span>{entry.location}</span>}

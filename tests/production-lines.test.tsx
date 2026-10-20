@@ -128,13 +128,13 @@ it("groups current equipment history and open work, with safe archive confirmati
   ).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Sulje" }));
   fireEvent.click(
-    screen.getByRole("button", { name: "Poista linja käytöstä" }),
+    screen.getByRole("button", { name: "Arkistoi tuotantolinja" }),
   );
   expect(screen.getByRole("alert")).toHaveTextContent(
     "Huoltotyöt ja historia säilyvät",
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Poista käytöstä ja säilytä laitteet" }),
+    screen.getByRole("button", { name: "Arkistoi ja säilytä laitteet" }),
   );
   await waitFor(() =>
     expect(screen.getByText("Ei tuotantolinjoja")).toBeInTheDocument(),
@@ -173,7 +173,7 @@ it("exposes no management actions to a technician or viewer while preserving lin
     screen.queryByRole("button", { name: "Muokkaa tuotantolinjaa" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Poista linja käytöstä" }),
+    screen.queryByRole("button", { name: "Arkistoi tuotantolinja" }),
   ).not.toBeInTheDocument();
 });
 it("keeps legacy snapshots without productionLines usable and filters search results", () => {

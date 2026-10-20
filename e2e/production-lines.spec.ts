@@ -96,14 +96,14 @@ test("production lines remain optional; managers create, edit, move and retire w
   expect(layout.overflow).toBeFalsy();
   if (isMobile) expect(layout.width).toBeLessThan(500);
   await page
-    .getByRole("button", { name: "Poista linja käytöstä", exact: true })
+    .getByRole("button", { name: "Arkistoi tuotantolinja", exact: true })
     .click();
   await expect(page.getByRole("alert")).toContainText(
     "Huoltotyöt ja historia säilyvät",
   );
   await page
     .getByRole("button", {
-      name: "Poista käytöstä ja säilytä laitteet",
+      name: "Arkistoi ja säilytä laitteet",
       exact: true,
     })
     .click();

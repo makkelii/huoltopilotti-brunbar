@@ -1,5 +1,7 @@
 import type { Local } from "./i18n";
 export type ProductionLine = {
+  archivedAt?: string | null;
+  canDelete?: boolean;
   id: string;
   name: string;
   identifier: string;
@@ -7,6 +9,8 @@ export type ProductionLine = {
   description: string;
 };
 export type Asset = {
+  archivedAt?: string | null;
+  canDelete?: boolean;
   id: string;
   name: string;
   productionLineId?: string | null;
@@ -109,6 +113,7 @@ export type Store = {
   version: 1;
   assets: Asset[];
   productionLines?: ProductionLine[];
+  archivedProductionLines?: ProductionLine[];
   jobs: Job[];
   items: Item[];
   faults: Fault[];
@@ -166,6 +171,7 @@ export function completeJob(
   if (
     !job ||
     job.status === "completed" ||
+    store.assets.some((a) => a.id === job.assetId && a.archivedAt) ||
     !Number.isFinite(actualMinutes) ||
     actualMinutes < 1 ||
     actualMinutes > 100000
