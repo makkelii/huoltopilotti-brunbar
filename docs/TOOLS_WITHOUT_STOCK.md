@@ -14,17 +14,39 @@ Yksittäiset tunnisteelliset työkalut voivat edelleen olla omia rekisteririvej�
 
 ## Tuotantoon vienti – vain omistajan hyväksynnän jälkeen
 
-Tarvitaan vain uusi migraatio:
-`supabase/migrations/202610200004_tools_without_stock.sql`.
-Se korvaa nykyisen sisäisen private_mutate_v2-funktion. Julkinen private_mutate
-säilyttää käyttöoikeustarkistukset, inactive-tarkistuksen ja historian tallennuksen.
-RLS-käytäntöjä, vanhoja migraatioita tai bootstrap-skriptejä ei muuteta eikä ajeta
-uudelleen tuotannossa. Migraatio ei päivitä tai poista nykyisiä tietorivejä.
+Main-haarassa on jo PR #3:n työkalukorjaus. Täydentävä korjaus piilottaa myös
+rekisterin yksikkökentän työkaluilta säilyttäen vanhan arvon, esittää raportissa
+käytön muodossa ”Käytetty” ja estää vanhan `adjust_stock`-RPC:n käyttämisen
+varastomuutokseen työkalulle. Raportti käyttää tallennettua historiatilannekuvaa,
+jotta rekisterin myöhempi nimenmuutos ei muuta suorituksen työkalunimeä.
 
-Hyväksynnän jälkeen aja ainoastaan uusi migraatio oikean Supabase-projektin SQL
-Editorissa ennen käyttöliittymän julkaisua. Ilman migraatiota vanha palvelin estää
-nollasaldoisten työkalujen käytön. Julkaisua, PR:n yhdistämistä tai tuotantokannan
-migraatiota ei ole tehty osana kehitystyötä.
+Migraatioiden järjestys hyväksynnän ja varmuuskopioinnin jälkeen:
+
+1. Tarkista asennetut migraatiot. Älä suorita bootstrapia tai jo asennettuja
+   migraatioita uudelleen. Aiemmat `core`, `private` ja `history_tenancy`
+   -migraatiot ovat edellytyksiä.
+2. Jos `202610200004_tools_without_stock.sql` ei ole vielä asennettu, suorita se
+   ensin Supabasen SQL Editorissa. Se päivittää sisäisen valmistumis-/rekisteri-RPC:n
+   niin, ettei aktiivisen työkalun käyttö riipu vanhasta saldosta tai varauksista.
+3. Suorita uusi `202610200005_tool_stock_guard.sql`. Jos 004 on jo asennettu,
+   tarvitaan vain 005. Se korvaa ainoastaan `adjust_stock`-funktion ja pitää sen
+   roolirajoitukset, yritysrajauksen sekä lukitusjärjestyksen ennallaan. Työkalun
+   oikaisuyritys palauttaa virheen, eikä saldoa, revisiota tai tapahtumalokia muuteta.
+   Varaosan ja kulutustarvikkeen varastomuutokset toimivat edelleen.
+4. Tarkista testiyrityksessä nollasaldoisen työkalun käyttö ja valmistuminen,
+   historia sekä varaosan kulutus. Hyväksy frontendin manuaalinen julkaisu erikseen.
+
+Kumpikaan migraatio ei lisää, poista tai muuta tauluja/sarakkeita eikä päivitä
+olemassa olevia inventaario- tai historiatietorivejä. Vanhoja työkalujen saldoja ja
+varastotapahtumia ei poisteta. Työkalun vanhoja sisäisiä määräarvoja ei näytetä
+käyttäjälle. Uusia työkalujen varastotapahtumia ei muodosteta sovelluksen
+rekisteri-, valmistumis- tai varasto-RPC:istä. Julkiseen selainkäyttöön kielletty
+sisäinen varastofunktio säilyy kiellettynä.
+
+SQL-tiedostot on ajettu vain erilliseen PostgreSQL-testikantaan. Tuotannon Supabasea
+ei ole muutettu tai testattu tässä työssä. DNS-/Pages-asetuksia, 585.fi:tä tai
+alkuperäistä Huolto-repositoriota ei muuteta. Uutta PR:ää ei yhdistetä eikä brunbar.fi:tä
+julkaista automaattisesti.
 
 ## Tarkistukset
 
@@ -37,3 +59,9 @@ migraatiota ei ole tehty osana kehitystyötä.
   Lisäksi nykyiset yrityseristys-, käyttöoikeus- ja samanaikaisuustestit.
 - Selaintesti: palvelimelta haettava nollasaldoinen työkalu valitaan varaosan kanssa
   ilman määräkenttää; valmistumisen RPC-sopimus tarkistetaan.
+
+Täydentävät testit tarkistavat myös vanhan työkalun muokkauksen ilman määrä- tai
+yksikkökenttää, kalibroinnin/tunnisteen/sijainnin ja sisäisten arvojen säilymisen,
+raportin muuttumattoman työkalunimen, suoran varasto-RPC:n työkalukiellon,
+muuttumattoman revision/lokin hylätyssä kutsussa sekä varaosien ja kulutustarvikkeiden
+saldo-oikaisujen, roolien ja yritysrajojen säilymisen.

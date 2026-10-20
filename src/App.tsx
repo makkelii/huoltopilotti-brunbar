@@ -380,7 +380,8 @@ export default function App({
         calibration: s("calibration"),
         compatible: s("compatible"),
         alternatives: s("alternatives"),
-        unit: s("unit"),
+        unit:
+          s("type") === "tools" ? (editing as Item | null)?.unit : s("unit"),
         externalId: s("externalId"),
         inactive: f.get("inactive") === "on",
       };
@@ -1274,10 +1275,22 @@ export default function App({
                 .map((j) => (
                   <p key={j.id}>
                     {j.name}:{" "}
-                    {Object.entries(j.actual)
+                    {(
+                      j.usedItems ||
+                      Object.entries(j.actual).map(([key, n]) => ({
+                        id: key,
+                        name: j.legacyReconstructed
+                          ? key
+                          : store.items.find((i) => i.id === key)?.name || key,
+                        type: store.items.find((i) => i.id === key)?.type,
+                        usedQuantity: n,
+                        unit: "",
+                      }))
+                    )
+                      .filter((item) => item.usedQuantity > 0)
                       .map(
-                        ([key, n]) =>
-                          `${store.items.find((i) => i.id === key)?.name}: ${n}`,
+                        (item) =>
+                          `${item.name}: ${item.type === "tools" ? t("toolUsed") : `${item.usedQuantity} ${item.unit || ""}`.trim()}`,
                       )
                       .join(", ") || "—"}
                   </p>
@@ -1767,13 +1780,15 @@ export default function App({
                 )}
                 {modal === "item" && (
                   <>
-                    <label>
-                      {t("unit")}
-                      <input
-                        name="unit"
-                        defaultValue={(editing as Item)?.unit || "kpl"}
-                      />
-                    </label>
+                    {itemType !== "tools" && (
+                      <label>
+                        {t("unit")}
+                        <input
+                          name="unit"
+                          defaultValue={(editing as Item)?.unit || "kpl"}
+                        />
+                      </label>
+                    )}
                     <label>
                       {t("externalId")}
                       <input

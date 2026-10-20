@@ -16,8 +16,10 @@ for migration in supabase/migrations/*private.sql; do
 done
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200003_history_tenancy.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200004_tools_without_stock.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200005_tool_stock_guard.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/private.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/history.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/tool_stock_guard.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-setup.sql
 mkdir -p work/db-tests
 (docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-owner.sql > work/db-tests/owner.log 2>&1) &

@@ -63,3 +63,5 @@ Password recovery setup and Finnish troubleshooting: [docs/PASSWORD_RECOVERY.md]
 Huoltohistoria ja usean yrityksen turvallinen käyttöönotto: [ohje](docs/HISTORY_TENANCY_SETUP.md).
 
 Valmistumislomakkeen haettavat työkalut ja varaosat: [käyttö ja käyttöönotto](docs/COMPLETION_ITEM_SELECTION.md).
+
+Työkalujen käyttö ilman varastosaldoja ja vaadittujen funktiopäivitysten järjestys: [TOOLS_WITHOUT_STOCK.md](docs/TOOLS_WITHOUT_STOCK.md).
