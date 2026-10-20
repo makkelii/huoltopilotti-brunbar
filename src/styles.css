@@ -2030,3 +2030,14 @@ textarea {
 .free-usage-row small { display: block; margin: .6rem 0; }
 .completion summary { cursor: pointer; padding: .75rem 0; }
 @media (max-width: 600px) { .history-facts { grid-template-columns: 1fr; } .free-usage .button-row { display: grid; grid-template-columns: 1fr; } }
+
+.nav-group + .nav-group { margin-top: 1rem; }
+.nav-group .nav-label { margin: .75rem .9rem .4rem; }
+.advanced-fields { border-top: 1px solid var(--border); margin: .75rem 0; }
+.advanced-fields summary { cursor: pointer; padding: .9rem 0; font-weight: 600; }
+.advanced-fields[open] summary { margin-bottom: .5rem; }
+.advanced-fields > label { display: grid; gap: .35rem; margin-bottom: .8rem; }
+.own-jobs { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }
+.own-jobs input { width: auto; }
+.edit-form input, .edit-form select, .edit-form textarea { max-width: 100%; min-width: 0; }
+@media (max-width: 600px) { .edit-form .form-grid { grid-template-columns: minmax(0, 1fr); } .toolbar { flex-wrap: wrap; } .dialog-actions { position: sticky; bottom: 0; background: var(--panel); padding: .75rem 0; } }

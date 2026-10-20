@@ -1,3 +1,4 @@
+import { ItemFields } from "./ItemFields";
 import { FreeUsageEditor } from "./FreeUsageEditor";
 import { MaintenanceHistory, historyDate } from "./MaintenanceHistory";
 import { validateFreeUsage, type FreeUsage } from "./completionUsage";
@@ -68,8 +69,8 @@ type Page =
   | "settings";
 const nav: { page: Page; icon: typeof Box }[] = [
   { page: "dashboard", icon: LayoutDashboard },
-  { page: "assets", icon: Box },
   { page: "jobs", icon: Wrench },
+  { page: "assets", icon: Box },
   { page: "inventory", icon: Package },
   { page: "radar", icon: Radio },
   { page: "templates", icon: BookOpen },
@@ -157,7 +158,12 @@ export default function App({
       : key;
     return translate(["fi", "en", "de"].includes(lang) ? lang : "fi", k);
   };
-  const [page, setPage] = useState<Page>("dashboard"),
+  const [page, setPage] = useState<Page>(
+      live && initialSnapshot?.role === "technician" ? "jobs" : "dashboard",
+    ),
+    [onlyMine, setOnlyMine] = useState(
+      live && initialSnapshot?.role === "technician",
+    ),
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
     [inventoryType, setInventoryType] = useState("all"),
@@ -305,6 +311,7 @@ export default function App({
   );
   const filteredJobs = store.jobs.filter(
     (j) =>
+      (!onlyMine || j.technician === userName) &&
       (filter === "all" ||
         j.status === filter ||
         (filter === "overdue" && j.due < today && j.status !== "completed")) &&
@@ -384,7 +391,8 @@ export default function App({
         calibration: s("calibration"),
         compatible: s("compatible"),
         alternatives: s("alternatives"),
-        unit: s("unit"),
+        unit:
+          s("type") === "tools" ? (editing as Item | null)?.unit : s("unit"),
         externalId: s("externalId"),
         inactive: f.get("inactive") === "on",
       };
@@ -494,7 +502,7 @@ export default function App({
         <thead>
           <tr>
             <th>{t("job")}</th>
-            <th>{t("due")}</th>
+            <th>{t("scheduleDate")}</th>
             <th>{t("readiness")}</th>
             <th>{t("technician")}</th>
             <th>{t("status")}</th>
@@ -527,7 +535,12 @@ export default function App({
                     <strong>{labelJob(j)}</strong>
                     <small>{assetName(j.assetId)} </small>
                     <small className="mobile-job-meta">
-                      {new Date(j.due + "T12:00:00").toLocaleDateString(lang)} ·{" "}
+                      {j.status === "completed"
+                        ? historyDate(j.completedAt, lang)
+                        : new Date(j.due + "T12:00:00").toLocaleDateString(
+                            lang,
+                          )}{" "}
+                      ·{" "}
                       {t(
                         j.due < today && j.status !== "completed"
                           ? "overdue"
@@ -546,10 +559,12 @@ export default function App({
                       : ""
                   }
                 >
-                  {new Date(j.due + "T12:00:00").toLocaleDateString(lang, {
-                    day: "numeric",
-                    month: "short",
-                  })}
+                  {j.status === "completed"
+                    ? historyDate(j.completedAt, lang)
+                    : new Date(j.due + "T12:00:00").toLocaleDateString(lang, {
+                        day: "numeric",
+                        month: "short",
+                      })}
                 </span>
                 {j.due < today && j.status !== "completed" && (
                   <small className="danger-text">{t("overdue")}</small>
@@ -611,8 +626,7 @@ export default function App({
           <span>
             <strong>{organizationName}</strong>
             <small>
-              {t("demo")}
-              {!live ? " · Business" : ""}
+              {live ? t(initialSnapshot?.role || "technician") : t("demo")}
             </small>
           </span>
           <ChevronDown size={15} />
@@ -624,33 +638,54 @@ export default function App({
               ? "ARBEITSBEREICH"
               : "WORKSPACE"}
         </div>
-        <nav>
-          {nav.map((n) => (
-            <button
-              key={n.page}
-              onClick={() => go(n.page)}
-              className={page === n.page ? "nav-item active" : "nav-item"}
-            >
-              <n.icon size={19} />
-              {t(n.page)}
-              {n.page === "jobs" && (
-                <span className="nav-count">{active.length}</span>
+        <nav aria-label={t("mainNavigation")}>
+          {(["primary", "registers", "management"] as const).map((group) => (
+            <div key={group} className="nav-group">
+              {group !== "primary" && (
+                <p className="nav-label">
+                  {t(
+                    group === "registers" ? "optionalRegistries" : "management",
+                  )}
+                </p>
               )}
-              {n.page === "radar" && <span className="new-dot" />}
-            </button>
+              {nav
+                .filter((n) =>
+                  group === "primary"
+                    ? ["dashboard", "jobs", "assets", "radar"].includes(n.page)
+                    : group === "registers"
+                      ? n.page === "inventory"
+                      : ["templates", "reports"].includes(n.page),
+                )
+                .map((n) => (
+                  <button
+                    key={n.page}
+                    onClick={() => go(n.page)}
+                    aria-current={page === n.page ? "page" : undefined}
+                    className={page === n.page ? "nav-item active" : "nav-item"}
+                  >
+                    <n.icon size={19} />
+                    {t(n.page)}
+                    {n.page === "jobs" && (
+                      <span className="nav-count">{active.length}</span>
+                    )}
+                  </button>
+                ))}
+            </div>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="demo-card">
-            <span className="demo-tag">
-              <span />
-              {t("demo")}
-            </span>
-            <p>{t("demoText")}</p>
-            <button onClick={() => setModal("help")}>
-              {t("help")} <ArrowUpRight size={14} />
-            </button>
-          </div>
+          {!live && (
+            <div className="demo-card">
+              <span className="demo-tag">
+                <span />
+                {t("demo")}
+              </span>
+              <p>{t("demoText")}</p>
+              <button onClick={() => setModal("help")}>
+                {t("help")} <ArrowUpRight size={14} />
+              </button>
+            </div>
+          )}
           <button className="nav-item" onClick={() => go("settings")}>
             <Settings size={19} />
             {t("settings")}
@@ -741,8 +776,12 @@ export default function App({
                   : page === "radar"
                     ? t("radarText")
                     : page === "inventory"
-                      ? t("readinessText")
-                      : t("demoText")}
+                      ? t("optionalRegistryHelp")
+                      : page === "jobs"
+                        ? t("jobsHelp")
+                        : page === "assets"
+                          ? t("assetsHelp")
+                          : t("managementHelp")}
               </p>
             </div>
             {page === "radar" && (
@@ -756,28 +795,30 @@ export default function App({
                 {t("newFault")}
               </Button>
             )}
-            {page !== "radar" && page !== "settings" && (
-              <Button
-                onClick={() =>
-                  page === "assets"
-                    ? open("asset")
+            {page !== "radar" &&
+              page !== "settings" &&
+              page !== "templates" && (
+                <Button
+                  onClick={() =>
+                    page === "assets"
+                      ? open("asset")
+                      : page === "inventory"
+                        ? open("item")
+                        : page === "reports"
+                          ? exportCsv()
+                          : open("job")
+                  }
+                >
+                  <Plus size={17} />
+                  {page === "assets"
+                    ? t("newAsset")
                     : page === "inventory"
-                      ? open("item")
+                      ? t("addItem")
                       : page === "reports"
-                        ? exportCsv()
-                        : open("job")
-                }
-              >
-                <Plus size={17} />
-                {page === "assets"
-                  ? t("newAsset")
-                  : page === "inventory"
-                    ? t("addItem")
-                    : page === "reports"
-                      ? t("export")
-                      : t("newJob")}
-              </Button>
-            )}
+                        ? t("export")
+                        : t("newJob")}
+                </Button>
+              )}
           </div>
           {page === "dashboard" && (
             <>
@@ -1031,20 +1072,30 @@ export default function App({
                 />
               </div>
               {page === "jobs" && (
-                <select
-                  aria-label={t("status")}
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                >
-                  <option value="all">{t("all")}</option>
-                  {(
-                    ["planned", "progress", "completed", "overdue"] as const
-                  ).map((s) => (
-                    <option key={s} value={s}>
-                      {t(s)}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <label className="checkbox-label own-jobs">
+                    <input
+                      type="checkbox"
+                      checked={onlyMine}
+                      onChange={(e) => setOnlyMine(e.target.checked)}
+                    />
+                    {t("myJobs")}
+                  </label>
+                  <select
+                    aria-label={t("status")}
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  >
+                    <option value="all">{t("all")}</option>
+                    {(
+                      ["planned", "progress", "completed", "overdue"] as const
+                    ).map((s) => (
+                      <option key={s} value={s}>
+                        {t(s)}
+                      </option>
+                    ))}
+                  </select>
+                </>
               )}
             </div>
           )}
@@ -1236,7 +1287,10 @@ export default function App({
                     ({ fault, terms }) => (
                       <article className="card padded match" key={fault.id}>
                         <span className="badge operational">
-                          {fault.id} · {fault.date} · {t("demo")}
+                          {new Date(fault.date).toLocaleDateString(
+                            lang === "fi" ? "fi-FI" : lang,
+                          )}
+                          {!live && <> · {t("demo")}</>}
                         </span>
                         <h2>{assetName(fault.assetId)}</h2>
                         <p>{local(fault.symptoms, lang)}</p>
@@ -1272,20 +1326,23 @@ export default function App({
               {jobTable(store.jobs.filter((j) => j.status === "completed"))}
               <h3>{t("overdue")}</h3>
               {jobTable(overdue)}
-              <h3>{t("actual")}</h3>
-              {store.jobs
-                .filter((j) => j.status === "completed")
-                .map((j) => (
-                  <p key={j.id}>
-                    {j.name}:{" "}
-                    {Object.entries(j.actual)
-                      .map(
-                        ([key, n]) =>
-                          `${store.items.find((i) => i.id === key)?.name}: ${n}`,
-                      )
-                      .join(", ") || "—"}
-                  </p>
-                ))}
+              <details>
+                <summary>{t("actual")}</summary>
+                {store.jobs
+                  .filter((job) => job.status === "completed")
+                  .map((job) => (
+                    <details className="report-history" key={job.id}>
+                      <summary>{job.name}</summary>
+                      <MaintenanceHistory
+                        job={job}
+                        asset={assetName(job.assetId)}
+                        items={store.items}
+                        members={snapshotRef.current?.members}
+                        lang={lang}
+                      />
+                    </details>
+                  ))}
+              </details>
             </section>
           )}
           {page === "templates" && (
@@ -1588,7 +1645,7 @@ export default function App({
                 ? t("onboardingText")
                 : modal === "help"
                   ? t("helpText")
-                  : t("demoText")}
+                  : t("formHelp")}
             </Dialog.Description>
             <Dialog.Close className="dialog-close" aria-label={t("close")}>
               <X size={20} />
@@ -1650,38 +1707,40 @@ export default function App({
                 )}
                 {modal === "asset" && (
                   <>
-                    <div className="form-grid">
-                      {(
-                        ["manufacturer", "model", "serial", "location"] as const
-                      ).map((k) => (
-                        <label key={k}>
-                          {t(k)}
-                          <input
-                            name={k}
-                            defaultValue={(editing as Asset)?.[k]}
-                          />
-                        </label>
-                      ))}
-                    </div>
                     <label>
-                      {t("description")}
-                      <textarea
-                        name="description"
-                        defaultValue={(editing as Asset)?.description}
+                      {t("location")}
+                      <input
+                        name="location"
+                        defaultValue={(editing as Asset)?.location}
                       />
                     </label>
+                    <details className="advanced-fields">
+                      <summary>{t("moreDetails")}</summary>
+                      <div className="form-grid">
+                        {(["manufacturer", "model", "serial"] as const).map(
+                          (key) => (
+                            <label key={key}>
+                              {t(key)}
+                              <input
+                                name={key}
+                                defaultValue={(editing as Asset)?.[key]}
+                              />
+                            </label>
+                          ),
+                        )}
+                      </div>
+                      <label>
+                        {t("description")}
+                        <textarea
+                          name="description"
+                          defaultValue={(editing as Asset)?.description}
+                        />
+                      </label>
+                    </details>
                   </>
                 )}
                 {modal === "job" && (
                   <>
-                    <label>
-                      {t("description")}
-                      <textarea
-                        name="description"
-                        defaultValue={(editing as Job)?.description}
-                      />
-                    </label>
-
                     <label>
                       {t("equipment")}
                       <select
@@ -1705,16 +1764,6 @@ export default function App({
                           name="due"
                           defaultValue={(editing as Job)?.due || today}
                         />
-                      </label>
-                      <label>
-                        {t("priority")}
-                        <select
-                          name="priority"
-                          defaultValue={(editing as Job)?.priority || "normal"}
-                        >
-                          <option value="normal">{t("normal")}</option>
-                          <option value="high">{t("high")}</option>
-                        </select>
                       </label>
                       <label>
                         {t("technician")}
@@ -1744,157 +1793,63 @@ export default function App({
                           />
                         )}
                       </label>
+                    </div>
+                    <details className="advanced-fields">
+                      <summary>{t("moreDetails")}</summary>
                       <label>
-                        {t("duration")}
-                        <input
-                          type="number"
-                          min="1"
-                          max="10000"
-                          required
-                          name="duration"
-                          defaultValue={(editing as Job)?.duration || 60}
+                        {t("description")}
+                        <textarea
+                          name="description"
+                          defaultValue={(editing as Job)?.description}
                         />
                       </label>
-                    </div>
-                    <label>
-                      {t("recurrence")}
-                      <input
-                        type="number"
-                        name="recurrence"
-                        min="0"
-                        max="3650"
-                        required
-                        defaultValue={(editing as Job)?.recurrence || 0}
-                      />
-                    </label>
+
+                      <div className="form-grid">
+                        <label>
+                          {t("priority")}
+                          <select
+                            name="priority"
+                            defaultValue={
+                              (editing as Job)?.priority || "normal"
+                            }
+                          >
+                            <option value="normal">{t("normal")}</option>
+                            <option value="high">{t("high")}</option>
+                          </select>
+                        </label>
+                        <label>
+                          {t("duration")}
+                          <input
+                            type="number"
+                            min="1"
+                            max="10000"
+                            required
+                            name="duration"
+                            defaultValue={(editing as Job)?.duration || 60}
+                          />
+                        </label>
+                      </div>
+                      <label>
+                        {t("recurrence")}
+                        <input
+                          type="number"
+                          name="recurrence"
+                          min="0"
+                          max="3650"
+                          required
+                          defaultValue={(editing as Job)?.recurrence || 0}
+                        />
+                      </label>
+                    </details>
                   </>
                 )}
                 {modal === "item" && (
-                  <>
-                    <label>
-                      {t("unit")}
-                      <input
-                        name="unit"
-                        defaultValue={(editing as Item)?.unit || "kpl"}
-                      />
-                    </label>
-                    <label>
-                      {t("externalId")}
-                      <input
-                        name="externalId"
-                        defaultValue={(editing as Item)?.externalId}
-                      />
-                    </label>
-                    <label>
-                      <input
-                        name="inactive"
-                        type="checkbox"
-                        defaultChecked={(editing as Item)?.inactive}
-                      />{" "}
-                      {t("inactive")}
-                    </label>
-
-                    <div className="form-grid">
-                      <label>
-                        {t("type")}
-                        <select
-                          name="type"
-                          value={itemType}
-                          onChange={(e) =>
-                            setItemType(e.target.value as Item["type"])
-                          }
-                        >
-                          {(["tools", "parts", "consumables"] as const).map(
-                            (k) => (
-                              <option key={k} value={k}>
-                                {t(k)}
-                              </option>
-                            ),
-                          )}
-                        </select>
-                      </label>
-                      {itemType !== "tools" && (
-                        <label>
-                          {t("quantity")}
-                          <input
-                            type="number"
-                            name="quantity"
-                            min="0"
-                            step="any"
-                            required
-                            defaultValue={(editing as Item)?.quantity || 0}
-                          />
-                        </label>
-                      )}
-                      <label>
-                        {t("storage")}
-                        <input
-                          name="location"
-                          required
-                          defaultValue={(editing as Item)?.location}
-                        />
-                      </label>
-                      <label>
-                        {t("manufacturer")}
-                        <input
-                          name="manufacturer"
-                          defaultValue={(editing as Item)?.manufacturer}
-                        />
-                      </label>
-                      <label>
-                        {lang === "fi"
-                          ? "Osanumero"
-                          : lang === "de"
-                            ? "Teilenummer"
-                            : "Part number"}
-                        <input
-                          name="partNumber"
-                          defaultValue={(editing as Item)?.partNumber}
-                        />
-                      </label>
-                      <label>
-                        {lang === "fi"
-                          ? "Kalibrointi voimassa"
-                          : lang === "de"
-                            ? "Kalibrierung gültig bis"
-                            : "Calibration valid until"}
-                        <input
-                          type="date"
-                          name="calibration"
-                          defaultValue={(editing as Item)?.calibration}
-                        />
-                      </label>
-                    </div>
-                    <label>
-                      {t("description")}
-                      <input
-                        name="spec"
-                        defaultValue={(editing as Item)?.spec}
-                      />
-                    </label>
-                    <label>
-                      {lang === "fi"
-                        ? "Yhteensopivat laitteet"
-                        : lang === "de"
-                          ? "Kompatible Anlagen"
-                          : "Compatible equipment"}
-                      <input
-                        name="compatible"
-                        defaultValue={(editing as Item)?.compatible}
-                      />
-                    </label>
-                    <label>
-                      {lang === "fi"
-                        ? "Hyväksytyt vaihtoehdot"
-                        : lang === "de"
-                          ? "Freigegebene Alternativen"
-                          : "Approved alternatives"}
-                      <input
-                        name="alternatives"
-                        defaultValue={(editing as Item)?.alternatives}
-                      />
-                    </label>
-                  </>
+                  <ItemFields
+                    item={editing as Item | null}
+                    type={itemType}
+                    onTypeChange={setItemType}
+                    lang={lang}
+                  />
                 )}
                 {error && <p role="alert">{error}</p>}
                 <div className="dialog-actions">
