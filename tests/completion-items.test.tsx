@@ -37,7 +37,7 @@ afterEach(cleanup);
 const addParts = () =>
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Lisää · Käytetyt varaosat ja tarvikkeet",
+      name: "Lisää varaosa (valinnainen)",
     }),
   );
 const input = () => screen.getByRole("searchbox");
@@ -90,7 +90,7 @@ it("records tool use explicitly without a consumption quantity field", async () 
     />,
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Lisää · Käytetyt työkalut" }),
+    screen.getByRole("button", { name: "Lisää työkalu (valinnainen)" }),
   );
   fireEvent.change(input(), { target: { value: data.items[0].name } });
   fireEvent.click(

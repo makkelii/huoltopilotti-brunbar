@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Plus, Search, Trash2, Wrench, Package } from "lucide-react";
 import { Button } from "./components/ui/button";
-import type { Item, Requirement } from "./domain";
+import type { FreeUsage, Item, Requirement } from "./domain";
 import { local, translate, type Lang } from "./i18n";
 import type {
   InventoryGroup,
@@ -16,6 +16,8 @@ type Props = {
   onChange: (value: Record<string, number>) => void;
   search: InventorySearch;
   requirements: Requirement[];
+  freeUsage?: FreeUsage[];
+  onFreeUsageChange?: (value: FreeUsage[]) => void;
 };
 
 export function CompletionItems({
@@ -24,8 +26,13 @@ export function CompletionItems({
   onChange,
   search,
   requirements,
+  freeUsage = [],
+  onFreeUsageChange,
 }: Props) {
   const t = (key: Parameters<typeof translate>[1]) => translate(lang, key);
+  const [manual, setManual] = useState<InventoryGroup | null>(null);
+  const [manualName, setManualName] = useState("");
+  const [manualQuantity, setManualQuantity] = useState(1);
   const [selected, setSelected] = useState<Item[]>([]);
   const [group, setGroup] = useState<InventoryGroup | null>(null);
   const [query, setQuery] = useState("");
@@ -96,20 +103,28 @@ export function CompletionItems({
             <Button
               type="button"
               variant="outline"
-              aria-label={`${t("addUsage")} · ${title(kind)}`}
+              aria-label={t(kind === "tools" ? "addTool" : "addPart")}
               onClick={(event) => {
                 opener.current = event.currentTarget;
+                setManual(onFreeUsageChange ? kind : null);
+                setManualName("");
+                setManualQuantity(1);
                 startSearch("");
                 setGroup(kind);
               }}
             >
               <Plus size={16} />
-              {t("addUsage")}
+              {t(kind === "tools" ? "addTool" : "addPart")}
             </Button>
           </div>
           {!selected.some((i) =>
             kind === "tools" ? i.type === "tools" : i.type !== "tools",
-          ) && <p className="usage-hint">{t("noUsageSelected")}</p>}
+          ) &&
+            !freeUsage.some((entry) =>
+              kind === "tools"
+                ? entry.type === "tools"
+                : entry.type === "parts",
+            ) && <p className="usage-hint">{t("noUsageSelected")}</p>}
           {selected
             .filter((i) =>
               kind === "tools" ? i.type === "tools" : i.type !== "tools",
@@ -118,7 +133,7 @@ export function CompletionItems({
               <div className="usage-row" key={item.id}>
                 <div className="usage-description">
                   <strong>{item.name}</strong>
-                  <small>{item.partNumber || item.id}</small>
+                  <small>{item.partNumber}</small>
                 </div>
                 {kind === "supplies" ? (
                   <div className="usage-amount">
@@ -164,6 +179,33 @@ export function CompletionItems({
                 </Button>
               </div>
             ))}
+          {freeUsage.map(
+            (entry, index) =>
+              (kind === "tools"
+                ? entry.type === "tools"
+                : entry.type === "parts") && (
+                <div className="usage-row" key={`manual-${index}`}>
+                  <strong>{entry.name}</strong>
+                  {entry.type === "parts" && (
+                    <span>
+                      {entry.quantity} {t("pieceUnit")}
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={`${t("removeUsage")} · ${entry.name}`}
+                    onClick={() =>
+                      onFreeUsageChange?.(
+                        freeUsage.filter((_, i) => i !== index),
+                      )
+                    }
+                  >
+                    <Trash2 size={17} />
+                  </Button>
+                </div>
+              ),
+          )}
           <p className="usage-hint">
             {t(kind === "tools" ? "toolsNotConsumed" : "stockUnitHint")}
           </p>
@@ -215,119 +257,219 @@ export function CompletionItems({
             }}
           >
             <Dialog.Title>{group && title(group)}</Dialog.Title>
-            <Dialog.Description>{t("inventorySearchHelp")}</Dialog.Description>
-            <label className="usage-search">
-              <Search size={18} />
-              <span className="sr-only">{t("searchInventory")}</span>
-              <input
-                ref={input}
-                type="search"
-                maxLength={100}
-                value={query}
-                onChange={(e) => startSearch(e.target.value)}
-                placeholder={t("searchInventory")}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.preventDefault();
-                }}
-              />
-            </label>
-            <div role="status" aria-live="polite" className="usage-hint">
-              {loading
-                ? t("loading")
-                : error
-                  ? ""
-                  : term.length < 2
-                    ? t("searchMinChars")
-                    : result.items.length === 0
-                      ? t("noInventoryResults")
-                      : `${t("searchResults")}: ${result.items.length}`}
-            </div>
-            {error && (
-              <div role="alert">
-                <p>{t("inventorySearchFailed")}</p>
+            <Dialog.Description>
+              {t(manual ? "freeUsageHint" : "inventorySearchHelp")}
+            </Dialog.Description>
+            {onFreeUsageChange && (
+              <div className="button-row">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant={manual ? "default" : "outline"}
                   onClick={() => {
-                    startSearch(query, page);
-                    setRetry((n) => n + 1);
+                    activeSearch.current++;
+                    setManual(group);
+                    setManualName("");
+                    setManualQuantity(1);
                   }}
                 >
-                  {t("retrySearch")}
+                  {t("writeUsage")}
+                </Button>
+                <Button
+                  type="button"
+                  variant={!manual ? "default" : "outline"}
+                  onClick={() => {
+                    setManual(null);
+                    startSearch("");
+                  }}
+                >
+                  {t("chooseRegistry")}
                 </Button>
               </div>
             )}
-            <ul
-              className="usage-results"
-              aria-label={t("searchResults")}
-              aria-busy={loading}
-            >
-              {result.items.map((item) => {
-                const exists = selected.some((i) => i.id === item.id);
-                const available = Math.max(0, item.quantity - item.reserved);
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className="usage-result"
-                      disabled={
-                        exists ||
-                        item.inactive ||
-                        (item.type !== "tools" && available <= 0)
+            {manual ? (
+              <div className="manual-usage">
+                <p>{t("freeUsageHint")}</p>
+                <label>
+                  {t("freeName")}
+                  <input
+                    ref={input}
+                    maxLength={200}
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.preventDefault();
+                    }}
+                  />
+                </label>
+                {manual === "supplies" && (
+                  <label>
+                    {t("usedQuantity")}
+                    <input
+                      type="number"
+                      min="0"
+                      max="100000000"
+                      step="any"
+                      value={manualQuantity}
+                      onChange={(e) =>
+                        setManualQuantity(Number(e.target.value))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.preventDefault();
+                      }}
+                    />
+                  </label>
+                )}
+                <Button
+                  type="button"
+                  disabled={
+                    !manualName.trim() ||
+                    freeUsage.length >= 100 ||
+                    (manual === "supplies" &&
+                      (!Number.isFinite(manualQuantity) ||
+                        manualQuantity <= 0 ||
+                        manualQuantity > 100000000))
+                  }
+                  onClick={() => {
+                    onFreeUsageChange?.([
+                      ...freeUsage,
+                      manual === "tools"
+                        ? { type: "tools", name: manualName.trim() }
+                        : {
+                            type: "parts",
+                            name: manualName.trim(),
+                            quantity: manualQuantity,
+                          },
+                    ]);
+                    setGroup(null);
+                    setManual(null);
+                  }}
+                >
+                  {t("addUsage")}
+                </Button>
+              </div>
+            ) : (
+              <>
+                <label className="usage-search">
+                  <Search size={18} />
+                  <span className="sr-only">{t("searchInventory")}</span>
+                  <input
+                    ref={input}
+                    type="search"
+                    maxLength={100}
+                    value={query}
+                    onChange={(e) => startSearch(e.target.value)}
+                    placeholder={t("searchInventory")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.preventDefault();
+                    }}
+                  />
+                </label>
+                <div role="status" aria-live="polite" className="usage-hint">
+                  {loading
+                    ? t("loading")
+                    : error
+                      ? ""
+                      : term.length < 2
+                        ? t("searchMinChars")
+                        : result.items.length === 0
+                          ? t("noInventoryResults")
+                          : `${t("searchResults")}: ${result.items.length}`}
+                </div>
+                {error && (
+                  <div role="alert">
+                    <p>{t("inventorySearchFailed")}</p>
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={() => {
-                        setSelected((items) => [...items, item]);
-                        onChange({
-                          ...actual,
-                          [item.id]:
-                            item.type === "tools" ? 1 : Math.min(1, available),
-                        });
-                        activeSearch.current++;
-                        setGroup(null);
+                        startSearch(query, page);
+                        setRetry((n) => n + 1);
                       }}
                     >
-                      <span>
-                        <strong>{item.name}</strong>
-                        <small>
-                          {t("partNumber")}: {item.partNumber || "—"} ·{" "}
-                          {t(item.type)}
-                        </small>
-                        <small>{item.externalId || item.id}</small>
-                        {exists && <small>{t("alreadySelected")}</small>}
-                        {item.type !== "tools" && available <= 0 && (
-                          <small>{t("inventoryUnavailable")}</small>
-                        )}
-                      </span>
-                      {item.type !== "tools" && (
-                        <span>
-                          {t("availableStock")}: {available}{" "}
-                          {item.unit || t("pieceUnit")}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <div className="usage-pagination">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={page === 0 || loading || error}
-                onClick={() => startSearch(query, page - 1)}
-              >
-                {t("previousResults")}
-              </Button>
-              <span>{page + 1}</span>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!result.hasMore || loading || error}
-                onClick={() => startSearch(query, page + 1)}
-              >
-                {t("nextResults")}
-              </Button>
-            </div>
+                      {t("retrySearch")}
+                    </Button>
+                  </div>
+                )}
+                <ul
+                  className="usage-results"
+                  aria-label={t("searchResults")}
+                  aria-busy={loading}
+                >
+                  {result.items.map((item) => {
+                    const exists = selected.some((i) => i.id === item.id);
+                    const available = Math.max(
+                      0,
+                      item.quantity - item.reserved,
+                    );
+                    return (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          className="usage-result"
+                          disabled={
+                            exists ||
+                            item.inactive ||
+                            (item.type !== "tools" && available <= 0)
+                          }
+                          onClick={() => {
+                            setSelected((items) => [...items, item]);
+                            onChange({
+                              ...actual,
+                              [item.id]:
+                                item.type === "tools"
+                                  ? 1
+                                  : Math.min(1, available),
+                            });
+                            activeSearch.current++;
+                            setGroup(null);
+                          }}
+                        >
+                          <span>
+                            <strong>{item.name}</strong>
+                            <small>
+                              {t("partNumber")}: {item.partNumber || "—"} ·{" "}
+                              {t(item.type)}
+                            </small>
+                            {item.externalId && (
+                              <small>{item.externalId}</small>
+                            )}
+                            {exists && <small>{t("alreadySelected")}</small>}
+                            {item.type !== "tools" && available <= 0 && (
+                              <small>{t("inventoryUnavailable")}</small>
+                            )}
+                          </span>
+                          {item.type !== "tools" && (
+                            <span>
+                              {t("availableStock")}: {available}{" "}
+                              {item.unit || t("pieceUnit")}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="usage-pagination">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={page === 0 || loading || error}
+                    onClick={() => startSearch(query, page - 1)}
+                  >
+                    {t("previousResults")}
+                  </Button>
+                  <span>{page + 1}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!result.hasMore || loading || error}
+                    onClick={() => startSearch(query, page + 1)}
+                  >
+                    {t("nextResults")}
+                  </Button>
+                </div>
+              </>
+            )}
             <Dialog.Close asChild>
               <Button type="button" variant="outline">
                 {t("close")}

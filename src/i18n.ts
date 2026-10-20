@@ -1,5 +1,45 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  addPart: [
+    "Lisää varaosa (valinnainen)",
+    "Add part (optional)",
+    "Ersatzteil hinzufügen (optional)",
+  ],
+  addTool: [
+    "Lisää työkalu (valinnainen)",
+    "Add tool (optional)",
+    "Werkzeug hinzufügen (optional)",
+  ],
+  freeName: ["Nimi", "Name", "Name"],
+  writeUsage: ["Kirjoita itse", "Enter manually", "Manuell eingeben"],
+  chooseRegistry: [
+    "Valitse rekisteristä",
+    "Choose from registry",
+    "Aus Register wählen",
+  ],
+  freeUsageHint: [
+    "Itse kirjattu tieto tallentuu huoltohistoriaan. Sitä ei lisätä rekisteriin eikä varastosaldo muutu.",
+    "Manual entries are saved in history without creating registry items or changing stock.",
+    "Manuelle Einträge werden im Verlauf gespeichert, ohne Register oder Bestand zu ändern.",
+  ],
+  workDone: ["Tehdyt työt", "Work performed", "Durchgeführte Arbeiten"],
+  recordComplete: [
+    "Kirjaa valmiiksi",
+    "Record completion",
+    "Abschluss speichern",
+  ],
+  completedOn: ["Suoritettu", "Completed", "Abgeschlossen"],
+  unknownHistoryItem: [
+    "Aiemmin kirjattu tuote (nimi ei saatavilla)",
+    "Previously recorded item (name unavailable)",
+    "Früher erfasster Artikel (Name nicht verfügbar)",
+  ],
+  unknownPerformer: [
+    "Nimi ei saatavilla",
+    "Name unavailable",
+    "Name nicht verfügbar",
+  ],
+
   positiveUsageQuantity: [
     "Käytetyn määrän on oltava suurempi kuin nolla.",
     "Quantity used must be greater than zero.",
