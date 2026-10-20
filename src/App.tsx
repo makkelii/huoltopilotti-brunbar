@@ -1,3 +1,4 @@
+import { repeatPlan, type RepeatPlan } from "./repeatMaintenance";
 import { applyLifecycle, type LifecycleRequest } from "./lifecycle";
 import type { Requirement } from "./domain";
 import {
@@ -172,6 +173,7 @@ export default function App({
     [draftId, setDraftId] = useState<string>(() => id()),
     [jobScope, setJobScope] = useState("all"),
     [jobAsset, setJobAsset] = useState(""),
+    [repeatDraft, setRepeatDraft] = useState<RepeatPlan | null>(null),
     [jobRequirements, setJobRequirements] = useState<Requirement[]>([]),
     [assetTarget, setAssetTarget] = useState<{
       assetId?: string;
@@ -344,6 +346,7 @@ export default function App({
       setError(t("noEquipment"));
       return;
     }
+    setRepeatDraft(null);
     if (kind === "job") {
       if (live && snapshotRef.current?.role === "viewer") return;
       const previous = entry as Job | null;
@@ -373,6 +376,24 @@ export default function App({
     setModal(kind);
     setError("");
   };
+  function repeatMaintenance(job: Job) {
+    if (live && snapshotRef.current?.role === "viewer") return;
+    const plan = repeatPlan(job, store, lang);
+    open("job");
+    setModal("job");
+    setEditing(null);
+    setDraftId(id());
+    setSelected(null);
+    setRepeatDraft(plan);
+    setJobRequirements(plan.requirements);
+    setJobAsset(plan.assetId);
+    const asset = store.assets.find((a) => a.id === plan.assetId);
+    setJobScope(
+      asset?.productionLineId ||
+        (plan.assetId && store.productionLines?.length ? "unassigned" : "all"),
+    );
+  }
+  const formJob = (editing as Job | null) || repeatDraft;
   function navigateEquipment(target: { assetId?: string; lineId?: string }) {
     setSelected(null);
     setHistoryAsset(null);
@@ -1636,6 +1657,43 @@ export default function App({
             ) : (
               <form onSubmit={submit} className="edit-form" aria-busy={saving}>
                 <fieldset className="form-fields" disabled={saving}>
+                  {modal === "job" && repeatDraft && (
+                    <section className="notice">
+                      <h3>{t("repeatMaintenance")}</h3>
+                      <p>{t("repeatHint")}</p>
+                      {!repeatDraft.assetId && (
+                        <p role="status">{t("repeatAssetUnavailable")}</p>
+                      )}
+                      {repeatDraft.warnings.length > 0 && (
+                        <p role="status">
+                          {t("repeatItemsUnavailable")}:{" "}
+                          {repeatDraft.warnings.join(", ")}
+                        </p>
+                      )}
+                      {repeatDraft.suggestions.length > 0 && (
+                        <details>
+                          <summary>{t("repeatSuggestions")}</summary>
+                          <p>{t("plannedNotUsed")}</p>
+                          {repeatDraft.suggestions.map((r) => (
+                            <Button
+                              key={r.id}
+                              type="button"
+                              variant="outline"
+                              disabled={jobRequirements.some(
+                                (x) => x.id === r.id,
+                              )}
+                              onClick={() =>
+                                setJobRequirements([...jobRequirements, r])
+                              }
+                            >
+                              {t("addItem")} · {local(r.label, lang)}
+                            </Button>
+                          ))}
+                        </details>
+                      )}
+                    </section>
+                  )}
+
                   {modal === "job" && (
                     <EquipmentPicker
                       assets={store.assets}
@@ -1653,7 +1711,10 @@ export default function App({
                       name="name"
                       required
                       maxLength={120}
-                      defaultValue={editing?.name}
+                      defaultValue={
+                        editing?.name ||
+                        (modal === "job" ? repeatDraft?.name : undefined)
+                      }
                     />
                   </label>
                   {modal === "fault" && (
@@ -1771,7 +1832,7 @@ export default function App({
                         {t("description")}
                         <textarea
                           name="description"
-                          defaultValue={(editing as Job)?.description}
+                          defaultValue={formJob?.description}
                         />
                       </label>
 
@@ -1789,9 +1850,7 @@ export default function App({
                           {t("priority")}
                           <select
                             name="priority"
-                            defaultValue={
-                              (editing as Job)?.priority || "normal"
-                            }
+                            defaultValue={formJob?.priority || "normal"}
                           >
                             <option value="normal">{t("normal")}</option>
                             <option value="high">{t("high")}</option>
@@ -1843,7 +1902,7 @@ export default function App({
                             max="10000"
                             required
                             name="duration"
-                            defaultValue={(editing as Job)?.duration || 60}
+                            defaultValue={formJob?.duration || 60}
                           />
                         </label>
                       </div>
@@ -1858,7 +1917,7 @@ export default function App({
                         <textarea
                           name="instructions"
                           maxLength={10000}
-                          defaultValue={(editing as Job)?.instructions}
+                          defaultValue={formJob?.instructions}
                         />
                       </label>
                       <label>
@@ -2276,6 +2335,12 @@ export default function App({
                     </fieldset>
                   </form>
                 )}
+                {chosen.status === "completed" &&
+                  (!live || snapshotRef.current?.role !== "viewer") && (
+                    <Button onClick={() => repeatMaintenance(chosen)}>
+                      {t("repeatMaintenance")}
+                    </Button>
+                  )}
                 {chosen.status === "completed" && (
                   <MaintenanceHistory
                     job={chosen}

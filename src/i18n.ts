@@ -1,5 +1,31 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  repeatMaintenance: [
+    "Tee sama huolto uudelleen",
+    "Repeat this maintenance",
+    "Diese Wartung wiederholen",
+  ],
+  repeatHint: [
+    "Muokkaa uuden työn suunnitelmaa. Vanha huolto säilyy muuttumattomana; toteumaa ei kopioida.",
+    "Edit the new plan. Original history is unchanged; actual usage is not copied.",
+    "Bearbeiten Sie den neuen Plan. Die Historie bleibt unverändert; Verbrauch wird nicht kopiert.",
+  ],
+  repeatAssetUnavailable: [
+    "Alkuperäinen laite ei ole aktiivinen. Valitse toinen aktiivinen laite tai peruuta.",
+    "The original equipment is not active. Select another active device or cancel.",
+    "Die ursprüngliche Anlage ist nicht aktiv. Wählen Sie eine aktive Anlage oder brechen Sie ab.",
+  ],
+  repeatItemsUnavailable: [
+    "Rekisteriviite ei ole käytettävissä. Nämä tarpeet kopioitiin vapaina; tarkista tai korvaa ne",
+    "Registry reference unavailable. These requirements were copied as manual entries; review or replace them",
+    "Registerverweis nicht verfügbar. Diese Bedarfe wurden frei kopiert; prüfen oder ersetzen Sie sie",
+  ],
+  repeatSuggestions: [
+    "Ehdotukset vanhasta toteumasta",
+    "Suggestions from previous usage",
+    "Vorschläge aus früherem Verbrauch",
+  ],
+
   archived: ["Arkistoitu", "Archived", "Archiviert"],
   archivedAssets: [
     "Arkistoidut laitteet",
