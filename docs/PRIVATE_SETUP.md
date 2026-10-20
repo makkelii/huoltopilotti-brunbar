@@ -1,3 +1,5 @@
+> Uusi huoltohistoria-/moniyrityspäivitys: [HISTORY_TENANCY_SETUP.md](HISTORY_TENANCY_SETUP.md). Olemassa olevan tuotannon tulee suorittaa vain siellä kuvattu uusi migraatio, ei bootstrapia uudelleen.
+
 # Private two-user setup — https://brunbar.fi/
 
 This guide prepares real Supabase data for one owner and one technician at https://brunbar.fi/. **This is preparation only. Nothing is deployed, merged or migrated automatically; 585.fi remains untouched.** No passwords, service-role keys, database connection strings or SMTP credentials should be posted into chat, committed, or stored in GitHub Variables. Keep them in the appropriate Supabase Dashboard or local secret configuration. This PR does not merge, deploy, create live accounts, send invitations or change the published site automatically.
@@ -100,7 +102,7 @@ Local automated tests cover SDK/HTTP contracts with mocks and actual PostgreSQL 
 
 - Authenticated records are loaded from PostgreSQL through `private_snapshot` and saved via `private_mutate`, never demo localStorage. UI preferences and the SDK's session are separate browser state. Separate devices share PostgreSQL records; polling runs every 15 seconds when no editing dialog is open. A manual **Reload data** action is available in Settings.
 - Stale revisions fail rather than overwrite concurrent work. After a conflict, reload and reapply your change. If a write response is lost, it may have committed: reload before retrying. Completion is atomic and guarded against duplicate consumption; the UI never retries it blindly.
-- Current scope supports one shared organization and two initial accounts, one default preparation template, and no application data-deletion UI. Use reviewed server/admin procedures for membership changes, record deletion and GDPR requests. Photos/QR workflows, advanced reservations and notifications are not added in this PR. Stripe stays inactive.
+- The original private setup has two initial accounts and one organization-wide preparation template. After the history/tenancy migration, additional organizations can be provisioned explicitly by the platform administrator and member roles managed within the application. There is no application data-deletion UI; use reviewed server/admin procedures for membership removal, record deletion and GDPR requests. Photos/QR workflows, advanced reservations and notifications are not added in this PR. Stripe stays inactive.
 - Back up before migrating. Enable and monitor Supabase backups, retain audit/history records according to your policy, review access periodically, and use production SMTP. Revoke sessions through Supabase Dashboard when a device is lost.
 
 ## Password recovery troubleshooting

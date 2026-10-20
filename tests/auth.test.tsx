@@ -279,3 +279,31 @@ it("handles a dashboard recovery callback with a session and without an auth que
     }),
   );
 });
+
+it("refuses ambiguous organization membership without a server-assigned default", async () => {
+  const f = fixture();
+  f.eq.mockResolvedValue({
+    data: [{ organization_id: "one" }, { organization_id: "two" }],
+    error: null,
+  });
+  render(<AuthGate client={f.client} isConfigured />);
+  await screen.findByRole("button", { name: "Kirjaudu" });
+  await act(async () => f.emit("SIGNED_IN", f.session));
+  await screen.findByRole("alert");
+  expect(f.rpc).not.toHaveBeenCalled();
+});
+it("uses only the database-assigned default for a multi-organization user", async () => {
+  const f = fixture();
+  f.eq.mockResolvedValue({
+    data: [
+      { organization_id: "other", is_default: false },
+      { organization_id: "org-one", is_default: true },
+    ] as never,
+    error: null,
+  });
+  render(<AuthGate client={f.client} isConfigured />);
+  await screen.findByRole("button", { name: "Kirjaudu" });
+  await act(async () => f.emit("SIGNED_IN", f.session));
+  await screen.findByText("Private Workshop");
+  expect(f.rpc).toHaveBeenCalledWith("private_snapshot", { p_org: "org-one" });
+});

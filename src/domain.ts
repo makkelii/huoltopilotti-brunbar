@@ -22,6 +22,9 @@ export type Item = {
   calibration: string;
   compatible: string;
   alternatives: string;
+  unit?: string;
+  externalId?: string;
+  inactive?: boolean;
 };
 export type Requirement = {
   id: string;
@@ -46,6 +49,12 @@ export type Job = {
   actual: Record<string, number>;
   completedAt?: string;
   recurrence: number;
+  legacyReconstructed?: boolean;
+  description?: string;
+  actualMinutes?: number;
+  completionNotes?: string;
+  performedBy?: string;
+  usedItems?: (Item & { usedQuantity: number })[];
 };
 export type Fault = {
   id: string;
@@ -108,15 +117,26 @@ export function completeJob(
   jobId: string,
   actual: Record<string, number>,
   notes: string,
+  actualMinutes = store.jobs.find((j) => j.id === jobId)?.duration || 0,
+  performedBy?: string,
+  completionNotes = "",
 ): Store {
   const job = store.jobs.find((j) => j.id === jobId);
-  if (!job || job.status === "completed") throw Error("invalid");
+  if (
+    !job ||
+    job.status === "completed" ||
+    !Number.isFinite(actualMinutes) ||
+    actualMinutes < 1 ||
+    actualMinutes > 100000
+  )
+    throw Error("invalid");
   for (const [itemId, n] of Object.entries(actual)) {
     const item = store.items.find((i) => i.id === itemId);
     if (
       !Number.isFinite(n) ||
       n < 0 ||
       !item ||
+      (item.inactive && n > 0) ||
       n > item.quantity - item.reserved
     )
       throw Error("stock");
@@ -141,6 +161,10 @@ export function completeJob(
             notes: "",
             actual: {},
             completedAt: undefined,
+            usedItems: undefined,
+            actualMinutes: undefined,
+            completionNotes: undefined,
+            performedBy: undefined,
           },
         ]
       : [];
@@ -158,6 +182,12 @@ export function completeJob(
               ...j,
               status: "completed" as const,
               actual,
+              actualMinutes,
+              completionNotes,
+              performedBy: performedBy || job.technician,
+              usedItems: store.items
+                .filter((i) => (actual[i.id] || 0) > 0)
+                .map((i) => ({ ...i, usedQuantity: actual[i.id] })),
               notes,
               completedAt: new Date().toISOString(),
             }

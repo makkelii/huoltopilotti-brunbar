@@ -1,5 +1,42 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  additionalNotes: ["Lisähuomiot", "Additional notes", "Zusätzliche Hinweise"],
+  noMaintenanceHistory: [
+    "Tälle laitteelle ei ole vielä valmistuneita huoltoja.",
+    "No completed maintenance for this asset yet.",
+    "Für diese Anlage gibt es noch keine abgeschlossenen Wartungen.",
+  ],
+
+  organizationRequired: [
+    "Käyttäjälle ei ole määritetty yksiselitteistä yritysjäsenyyttä. Pyydä ylläpitäjää tarkistamaan jäsenyys ja oletusorganisaatio.",
+    "No unambiguous organization membership is assigned. Ask an administrator to check membership and the default organization.",
+    "Keine eindeutige Organisationsmitgliedschaft zugewiesen. Administration um Prüfung der Mitgliedschaft und Standardorganisation bitten.",
+  ],
+  legacyHistory: [
+    "Vanha historiatietue: kaikkia valmistumishetken rekisteritietoja tai käytettyä aikaa ei ole tallennettu.",
+    "Legacy record: some registry details at completion or actual time were not recorded.",
+    "Älterer Datensatz: Nicht alle Stammdaten zum Abschlusszeitpunkt oder tatsächlichen Zeiten wurden erfasst.",
+  ],
+
+  actualMinutes: [
+    "Käytetty aika (min)",
+    "Actual time (min)",
+    "Tatsächliche Zeit (Min.)",
+  ],
+  performedBy: ["Suorittaja", "Performed by", "Ausgeführt von"],
+  unit: ["Yksikkö", "Unit", "Einheit"],
+  externalId: [
+    "Ulkoisen järjestelmän tunniste",
+    "External system ID",
+    "Externe System-ID",
+  ],
+  inactive: ["Poistettu käytöstä", "Inactive", "Außer Betrieb"],
+  maintenanceHistory: [
+    "Huoltohistoria",
+    "Maintenance history",
+    "Wartungshistorie",
+  ],
+
   recoveryRequestError: [
     "Palautuspyyntöä ei voitu lähettää. Tarkista verkkoyhteys. Jos ongelma jatkuu, ylläpitäjän tulee tarkistaa Supabasen Auth-lokit, sähköpostiasetukset ja palautusosoite.",
     "The recovery request could not be sent. Check your connection. If this continues, ask an administrator to check Supabase Auth logs, email settings and the redirect URL.",

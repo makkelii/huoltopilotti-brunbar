@@ -98,4 +98,57 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await expect(
     page.getByText("Verified demo completion", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Sulje", exact: true }).click();
+  await navigate("Laitteet");
+  await page.reload();
+  await page
+    .locator(".asset-card")
+    .filter({ hasText: "Edited CNC" })
+    .getByRole("button", { name: "Huoltohistoria" })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Revised maintenance/ })
+    .click();
+  await expect(
+    page.getByText("Verified demo completion", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByText(/SKF 6205-2RS/)
+      .last(),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Sulje", exact: true }).click();
+  await navigate("Varasto ja työkalut");
+  await page
+    .getByRole("row")
+    .filter({ hasText: "SKF 6205-2RS" })
+    .getByRole("button", { name: "Muokkaa" })
+    .click();
+  await page
+    .getByLabel("Nimi", { exact: true })
+    .fill("Renamed and archived bearing");
+  await page.getByLabel("Poistettu käytöstä", { exact: true }).check();
+  await page.getByRole("button", { name: "Tallenna", exact: true }).click();
+  await page.reload();
+  await navigate("Laitteet");
+  await page
+    .locator(".asset-card")
+    .filter({ hasText: "Edited CNC" })
+    .getByRole("button", { name: "Huoltohistoria" })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Revised maintenance/ })
+    .click();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByText(/SKF 6205-2RS/)
+      .last(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByText(/Renamed and archived bearing/),
+  ).toHaveCount(0);
 });

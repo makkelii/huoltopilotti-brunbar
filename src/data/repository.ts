@@ -41,6 +41,8 @@ export class Repository {
         id: completed.id,
         actual: completed.actual,
         notes: completed.notes,
+        actualMinutes: completed.actualMinutes,
+        completionNotes: completed.completionNotes,
       };
     } else if (next.templateVersion !== before.templateVersion) {
       kind = "template";
