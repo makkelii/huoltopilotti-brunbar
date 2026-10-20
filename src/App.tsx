@@ -1,3 +1,6 @@
+import { PlannedKit } from "./PlannedKit";
+import { RelatedMaintenance } from "./RelatedMaintenance";
+import { worklist } from "./worklist";
 import { KnowledgeSearch } from "./KnowledgeSearch";
 import { type HistoryService, demoHistoryService } from "./data/historySearch";
 import { repeatPlan, type RepeatPlan } from "./repeatMaintenance";
@@ -163,7 +166,10 @@ export default function App({
       : key;
     return translate(["fi", "en", "de"].includes(lang) ? lang : "fi", k);
   };
-  const [page, setPage] = useState<Page>("dashboard"),
+  const [page, setPage] = useState<Page>(
+      initialSnapshot?.role === "technician" ? "jobs" : "dashboard",
+    ),
+    [jobWindow, setJobWindow] = useState({ key: "", page: 0 }),
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("active"),
     [inventoryType, setInventoryType] = useState("all"),
@@ -430,26 +436,46 @@ export default function App({
     today = workshopDate();
   const overdue = active.filter((j) => j.due < today);
   const chosen = store.jobs.find((j) => j.id === selected);
-  const filteredJobs = store.jobs.filter(
-    (j) =>
-      (filter === "all" ||
-        (filter === "active" && j.status !== "completed") ||
-        j.status === filter ||
-        (filter === "overdue" && j.due < today && j.status !== "completed")) &&
-      (!onlyMine || j.technician === userName) &&
-      (!onlyOverdue || (j.due < today && j.status !== "completed")) &&
-      (!listAsset || j.assetId === listAsset) &&
-      (store.assets.some(
-        (a) => a.id === j.assetId && inEquipmentScope(a, listScope),
-      ) ||
-        (j.status === "completed" &&
-          listScope === "all" &&
-          !listAsset &&
-          store.removedAssets?.some((a) => a.id === j.assetId))) &&
-      (j.name + " " + store.assets.find((a) => a.id === j.assetId)?.name)
-        .toLowerCase()
-        .includes(query.toLowerCase()),
+  const filteredJobs = useMemo(
+    () =>
+      worklist(store, {
+        filter,
+        onlyMine,
+        userName,
+        onlyOverdue,
+        today,
+        assetId: listAsset,
+        scope: listScope,
+        query,
+        lang,
+      }),
+    [
+      store,
+      filter,
+      onlyMine,
+      userName,
+      onlyOverdue,
+      today,
+      listAsset,
+      listScope,
+      query,
+      lang,
+    ],
   );
+  const windowKey = JSON.stringify([
+    filter,
+    onlyMine,
+    onlyOverdue,
+    listAsset,
+    listScope,
+    query,
+    lang,
+  ]);
+  const jobPage = Math.min(
+    jobWindow.key === windowKey ? jobWindow.page : 0,
+    Math.max(0, Math.ceil(filteredJobs.length / 25) - 1),
+  );
+  const visibleJobs = filteredJobs.slice(jobPage * 25, (jobPage + 1) * 25);
   const labelJob = (j: Job) => {
     const names: Record<string, Key> = {};
     return names[j.id] ? t(names[j.id]) : j.name;
@@ -730,6 +756,27 @@ export default function App({
                         }
                       </small>
                     )}
+                    {j.status !== "completed" && (
+                      <>
+                        {j.description && (
+                          <small className="worklist-description">
+                            {j.description}
+                          </small>
+                        )}
+                        <small>
+                          {
+                            store.assets.find((a) => a.id === j.assetId)
+                              ?.location
+                          }
+                        </small>
+                        <PlannedKit
+                          job={j}
+                          items={store.items}
+                          lang={lang}
+                          compact
+                        />
+                      </>
+                    )}
                     <small className="mobile-job-meta">
                       {new Date(j.due + "T12:00:00").toLocaleDateString(lang)} ·{" "}
                       {t(
@@ -994,10 +1041,18 @@ export default function App({
                 <Search size={18} />
                 <input
                   aria-label={t(
-                    page === "inventory" ? "inventorySearch" : "search",
+                    page === "inventory"
+                      ? "inventorySearch"
+                      : page === "jobs"
+                        ? "worklistSearch"
+                        : "search",
                   )}
                   placeholder={t(
-                    page === "inventory" ? "inventorySearch" : "search",
+                    page === "inventory"
+                      ? "inventorySearch"
+                      : page === "jobs"
+                        ? "worklistSearch"
+                        : "search",
                   )}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -1088,7 +1143,34 @@ export default function App({
                 </Button>
               </div>
               <section className="card">
-                {jobTable(filteredJobs)}
+                {jobTable(visibleJobs)}
+                {filteredJobs.length > 25 && (
+                  <nav className="worklist-pages" aria-label={t("jobs")}>
+                    <Button
+                      variant="outline"
+                      disabled={jobPage === 0}
+                      onClick={() =>
+                        setJobWindow({ key: windowKey, page: jobPage - 1 })
+                      }
+                    >
+                      {t("previousPage")}
+                    </Button>
+                    <span role="status">
+                      {jobPage * 25 + 1}–
+                      {Math.min((jobPage + 1) * 25, filteredJobs.length)} /{" "}
+                      {filteredJobs.length}
+                    </span>
+                    <Button
+                      variant="outline"
+                      disabled={(jobPage + 1) * 25 >= filteredJobs.length}
+                      onClick={() =>
+                        setJobWindow({ key: windowKey, page: jobPage + 1 })
+                      }
+                    >
+                      {t("nextPage")}
+                    </Button>
+                  </nav>
+                )}
                 {!filteredJobs.length && (
                   <p className="empty-state">
                     {t("empty")}{" "}
@@ -2135,92 +2217,123 @@ export default function App({
                     {chosen.description && (
                       <p className="job-instructions">{chosen.description}</p>
                     )}
+                    {chosen.requirements
+                      .filter((r) => r.category === "safety")
+                      .map((r) => (
+                        <p className="safety-notice" key={r.id}>
+                          {local(r.label, lang)}
+                        </p>
+                      ))}
+                    <section aria-label={t("takeAlong")}>
+                      <h2>{t("takeAlong")}</h2>
+                      <p>{t("preparationOptional")}</p>
+                      <PlannedKit
+                        job={chosen}
+                        items={store.items}
+                        lang={lang}
+                      />
+                    </section>
                     {chosen.instructions && (
                       <section className="job-instructions">
                         <h3>{t("workInstructions")}</h3>
                         <p>{chosen.instructions}</p>
                       </section>
                     )}
-                    <div className="section-heading">
-                      <h2>{t("plannedSupplies")}</h2>
-                      <span className="badge planned">
-                        {t(readiness(chosen))}
-                      </span>
-                    </div>
-                    {chosen.requirements.map((r) => {
-                      const item = (
-                        chosen.status === "completed"
-                          ? chosen.usedItems || []
-                          : store.items
-                      ).find((i) => i.id === r.itemId);
-                      return (
-                        <div className="requirement" key={r.id}>
-                          <div>
-                            <small>{t(r.category)}</small>
-                            <p>{local(r.label, lang)}</p>
-                            <small>
-                              {r.category !== "tools" && (
-                                <>
-                                  {t("quantity")}: {r.quantity}
-                                </>
-                              )}
-                            </small>
-                            {item && (
+                    <details className="preparation-checks">
+                      <summary>{t("preparationChecks")}</summary>
+                      <div className="section-heading">
+                        <h2>{t("plannedSupplies")}</h2>
+                        <span className="badge planned">
+                          {t(readiness(chosen))}
+                        </span>
+                      </div>
+                      {chosen.requirements.map((r) => {
+                        const item = (
+                          chosen.status === "completed"
+                            ? chosen.usedItems || []
+                            : store.items
+                        ).find((i) => i.id === r.itemId);
+                        return (
+                          <div className="requirement" key={r.id}>
+                            <div>
+                              <small>{t(r.category)}</small>
+                              <p>{local(r.label, lang)}</p>
                               <small>
-                                {item.location} ·{" "}
-                                {item.type !== "tools" && (
+                                {r.category !== "tools" && (
                                   <>
-                                    {t("quantity")}: {item.quantity} ·{" "}
+                                    {t("quantity")}: {r.quantity}
                                   </>
                                 )}
-                                {item.spec}
-                                {item.calibration
-                                  ? " · " + item.calibration
-                                  : ""}
                               </small>
-                            )}
+                              {item && (
+                                <small>
+                                  {item.location} ·{" "}
+                                  {item.type !== "tools" && (
+                                    <>
+                                      {t("quantity")}: {item.quantity} ·{" "}
+                                    </>
+                                  )}
+                                  {item.spec}
+                                  {item.calibration
+                                    ? " · " + item.calibration
+                                    : ""}
+                                </small>
+                              )}
+                            </div>
+                            <select
+                              aria-label={local(r.label, lang)}
+                              disabled={
+                                chosen.status === "completed" ||
+                                saving ||
+                                (live && snapshotRef.current?.role === "viewer")
+                              }
+                              value={r.state}
+                              onChange={(e) =>
+                                change({
+                                  ...store,
+                                  jobs: store.jobs.map((j) =>
+                                    j.id === chosen.id
+                                      ? {
+                                          ...j,
+                                          requirements: j.requirements.map(
+                                            (x) =>
+                                              x.id === r.id
+                                                ? {
+                                                    ...x,
+                                                    state: e.target
+                                                      .value as typeof r.state,
+                                                  }
+                                                : x,
+                                          ),
+                                        }
+                                      : j,
+                                  ),
+                                })
+                              }
+                            >
+                              {(
+                                [
+                                  "unchecked",
+                                  "ready",
+                                  "needs",
+                                  "review",
+                                ] as const
+                              ).map((s) => (
+                                <option key={s} value={s}>
+                                  {t(s)}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <select
-                            aria-label={local(r.label, lang)}
-                            disabled={
-                              chosen.status === "completed" ||
-                              saving ||
-                              (live && snapshotRef.current?.role === "viewer")
-                            }
-                            value={r.state}
-                            onChange={(e) =>
-                              change({
-                                ...store,
-                                jobs: store.jobs.map((j) =>
-                                  j.id === chosen.id
-                                    ? {
-                                        ...j,
-                                        requirements: j.requirements.map((x) =>
-                                          x.id === r.id
-                                            ? {
-                                                ...x,
-                                                state: e.target
-                                                  .value as typeof r.state,
-                                              }
-                                            : x,
-                                        ),
-                                      }
-                                    : j,
-                                ),
-                              })
-                            }
-                          >
-                            {(
-                              ["unchecked", "ready", "needs", "review"] as const
-                            ).map((s) => (
-                              <option key={s} value={s}>
-                                {t(s)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </details>
+                    <RelatedMaintenance
+                      key={chosen.id}
+                      job={chosen}
+                      store={store}
+                      lang={lang}
+                    />
                   </>
                 )}
                 {chosen.status !== "completed" &&

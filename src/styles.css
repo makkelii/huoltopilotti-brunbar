@@ -2051,3 +2051,79 @@ textarea {
   width: 100%;
   min-height: 44px;
 }
+
+/* Technician preparation summaries retain all item names at narrow widths. */
+.planned-kit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 12px 0;
+  text-align: left;
+}
+.kit-group,
+.kit-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.kit-group {
+  gap: 10px;
+}
+.kit-item small {
+  color: var(--muted);
+}
+.compact-kit {
+  font-size: 12px;
+  gap: 10px;
+}
+.compact-kit strong {
+  font-size: 12px;
+}
+.worklist-description {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.maintenance-table .job-link > span:last-child {
+  min-width: 0;
+  flex: 1;
+}
+.maintenance-table td:first-child {
+  white-space: normal;
+  min-width: 240px;
+}
+.preparation-checks,
+.related-maintenance {
+  margin: 20px 0;
+}
+.preparation-checks summary,
+.related-maintenance summary {
+  min-height: 48px;
+  padding: 12px 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.related-maintenance details {
+  border-bottom: 1px solid var(--border);
+}
+.worklist-pages {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .planned-kit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .maintenance-table td:first-child {
+    min-width: 0;
+  }
+  .compact-kit {
+    margin-bottom: 8px;
+  }
+}

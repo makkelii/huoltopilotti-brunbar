@@ -1,5 +1,54 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  takeAlong: ["Ota mukaan", "Take along", "Mitnehmen"],
+  plannedParts: [
+    "Varaosat ja tarvikkeet",
+    "Parts and supplies",
+    "Ersatzteile und Verbrauchsmaterial",
+  ],
+  noPlannedItems: [
+    "Ei suunniteltuja nimikkeitä",
+    "No planned items",
+    "Keine geplanten Artikel",
+  ],
+  available: ["Käytettävissä", "Available", "Verfügbar"],
+  preparationOptional: [
+    "Suunnitellut tarpeet. Voit käyttää tarkistuslistaa valmistautumiseen; erillisiä kuittauksia ei vaadita.",
+    "Planned requirements. Preparation checks are optional.",
+    "Geplante Bedarfe. Vorbereitungsprüfungen sind optional.",
+  ],
+  preparationChecks: [
+    "Valmistelun tilat ja muut ohjeet",
+    "Preparation status and other instructions",
+    "Vorbereitungsstatus und weitere Hinweise",
+  ],
+  previousMaintenance: [
+    "Aiemmat huollot samalla laitteella",
+    "Previous maintenance on this equipment",
+    "Frühere Wartungen an dieser Anlage",
+  ],
+  sameEquipmentHistory: [
+    "Alkuperäiset valmistuneet kirjaukset, uusin ensin. Työ voi poiketa nykyisestä huollosta.",
+    "Original completed records, newest first. The work may differ from the current task.",
+    "Originale abgeschlossene Einträge, neueste zuerst. Die Arbeit kann vom aktuellen Auftrag abweichen.",
+  ],
+  noPreviousMaintenance: [
+    "Laitteelle ei ole aiempia valmistuneita huoltoja.",
+    "No previous completed maintenance for this equipment.",
+    "Keine früheren abgeschlossenen Wartungen für diese Anlage.",
+  ],
+  moreHistory: [
+    "Näytä lisää huoltoja",
+    "Show more maintenance",
+    "Weitere Wartungen anzeigen",
+  ],
+  previousPage: ["Edelliset työt", "Previous jobs", "Vorherige Aufträge"],
+  nextPage: ["Seuraavat työt", "Next jobs", "Nächste Aufträge"],
+  worklistSearch: [
+    "Hae työtä, laitetta, linjaa, sijaintia tai nimikettä",
+    "Search jobs, equipment, lines, locations or items",
+    "Auftrag, Anlage, Linie, Standort oder Artikel suchen",
+  ],
   completedAsPlanned: [
     "Huolto tehty suunnitelman mukaan.",
     "Maintenance completed as planned.",
