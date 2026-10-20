@@ -208,12 +208,18 @@ export function KnowledgeSearch({
             <h3>
               {historyName(row.assetName, t("equipment"))}
               {row.assetIdentifier ? ` · ${row.assetIdentifier}` : ""}{" "}
-              {row.archived && <span className="badge">{t("archived")}</span>}
+              {row.removed && (
+                <span className="badge">{t("removedFromRegistry")}</span>
+              )}
+              {row.archived && !row.removed && (
+                <span className="badge">{t("archived")}</span>
+              )}
             </h3>
             <p>{completionTime(row.at, lang)}</p>
             {row.lineName && (
               <p>
-                {t("historicalLine")}: {row.lineName}
+                {t("historicalLine")}: {row.lineName}{" "}
+                {row.lineRemoved ? ` · ${t("removedFromRegistry")}` : ""}
               </p>
             )}
             {!row.metadataKnown && (
@@ -308,6 +314,9 @@ export function KnowledgeSearch({
             <Dialog.Description>{record?.row.assetName}</Dialog.Description>
             {record && (
               <>
+                {record.row.removed && (
+                  <p className="notice">{t("removedFromRegistry")}</p>
+                )}
                 {record.row.kind === "maintenance" ? (
                   <>
                     <MaintenanceHistory

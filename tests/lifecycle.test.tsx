@@ -130,13 +130,19 @@ it("empty records can be deleted, but server and client dependency flags block r
   const s = base();
   s.faults = [];
   expect(assetDeletable(s, s.assets[0])).toBe(true);
+  s.assets[0].archivedAt = "2026-10-20";
+  s.productionLines![0].archivedAt = "2026-10-20";
   expect(
-    applyLifecycle(s, { kind: "asset_delete", data: { id: s.assets[0].id } })
-      .assets,
+    applyLifecycle(s, {
+      kind: "asset_delete",
+      data: { id: s.assets[0].id, confirmation: s.assets[0].serial },
+    }).assets,
   ).toHaveLength(s.assets.length - 1);
   expect(
-    applyLifecycle(s, { kind: "production_line_delete", data: { id: "line" } })
-      .productionLines,
+    applyLifecycle(s, {
+      kind: "production_line_delete",
+      data: { id: "line", confirmation: "TL-1" },
+    }).productionLines,
   ).toEqual([]);
   expect(() =>
     applyLifecycle(
@@ -220,10 +226,10 @@ it("server rejection preserves the record and modal; a second click cannot issue
       .getByRole("heading", { name: s.assets[0].name, hidden: true })
       .closest("section")!,
   );
-  fireEvent.click(card.getByRole("button", { name: "Poista pysyvästi" }));
+  fireEvent.click(card.getByRole("button", { name: "Arkistoi laite" }));
   const dialog = within(screen.getByRole("dialog"));
-  fireEvent.click(dialog.getByRole("button", { name: "Poista pysyvästi" }));
-  fireEvent.click(dialog.getByRole("button", { name: "Poista pysyvästi" }));
+  fireEvent.click(dialog.getByRole("button", { name: "Arkistoi laite" }));
+  fireEvent.click(dialog.getByRole("button", { name: "Arkistoi laite" }));
   expect(mutate).toHaveBeenCalledTimes(1);
   reject(Error("offline"));
   await waitFor(() => expect(dialog.getByRole("alert")).toBeInTheDocument());
@@ -231,7 +237,7 @@ it("server rejection preserves the record and modal; a second click cannot issue
     screen.getByRole("heading", { name: s.assets[0].name, hidden: true }),
   ).toBeInTheDocument();
   expect(
-    dialog.getByRole("button", { name: "Poista pysyvästi" }),
+    dialog.getByRole("button", { name: "Arkistoi laite" }),
   ).not.toBeDisabled();
 });
 it("lifecycle repository uses the shared revision RPC and reloads the authoritative snapshot", async () => {

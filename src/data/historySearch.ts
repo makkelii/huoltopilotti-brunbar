@@ -27,6 +27,7 @@ export type HistoryResult = {
   metadataKnown: boolean;
   archived: boolean;
   removed?: boolean;
+  lineRemoved?: boolean;
   matchedFields: string[];
 };
 export type HistoryPage = { results: HistoryResult[]; hasMore: boolean };
@@ -43,7 +44,9 @@ export function demoHistoryService(store: Store): HistoryService {
   const jobs: HistoryResult[] = store.jobs
     .filter((j) => j.status === "completed")
     .map((j) => {
-      const a = store.assets.find((a) => a.id === j.assetId);
+      const a = [...store.assets, ...(store.removedAssets || [])].find(
+        (a) => a.id === j.assetId,
+      );
       return {
         id: j.id,
         kind: "maintenance",
@@ -76,6 +79,7 @@ export function demoHistoryService(store: Store): HistoryService {
         ].join(", "),
         metadataKnown: false,
         archived: !!a?.archivedAt,
+        removed: !!store.removedAssets?.some((a) => a.id === j.assetId),
         matchedFields: [],
       };
     });
@@ -84,7 +88,10 @@ export function demoHistoryService(store: Store): HistoryService {
     kind: "fault",
     title: local(f.symptoms, "fi"),
     assetId: f.assetId,
-    assetName: store.assets.find((a) => a.id === f.assetId)?.name || "",
+    assetName:
+      [...store.assets, ...(store.removedAssets || [])].find(
+        (a) => a.id === f.assetId,
+      )?.name || "",
     assetIdentifier: "",
     lineId: null,
     lineName: null,
@@ -94,7 +101,10 @@ export function demoHistoryService(store: Store): HistoryService {
     parts: "",
     tools: "",
     metadataKnown: false,
-    archived: !!store.assets.find((a) => a.id === f.assetId)?.archivedAt,
+    archived: !![...store.assets, ...(store.removedAssets || [])].find(
+      (a) => a.id === f.assetId,
+    )?.archivedAt,
+    removed: !!store.removedAssets?.some((a) => a.id === f.assetId),
     matchedFields: [],
   }));
   const rows = [...jobs, ...faults];
@@ -152,7 +162,7 @@ export function demoHistoryService(store: Store): HistoryService {
       return r;
     },
     options: async () => ({
-      assets: store.assets.map((a) => ({
+      assets: [...store.assets, ...(store.removedAssets || [])].map((a) => ({
         value: a.id,
         label: [a.name, a.serial].filter(Boolean).join(" · "),
       })),

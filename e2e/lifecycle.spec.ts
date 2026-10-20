@@ -26,11 +26,9 @@ test("equipment and line lifecycle preserve history, restore without moving devi
     await expect(page.getByRole("dialog")).toHaveCount(0);
   };
   await createLine("Testilinja");
-  const card = page
-    .locator(".equipment-card")
-    .filter({
-      has: page.getByRole("heading", { name: "CNC Haas VF-2", exact: true }),
-    });
+  const card = page.locator(".equipment-card").filter({
+    has: page.getByRole("heading", { name: "CNC Haas VF-2", exact: true }),
+  });
   await card
     .getByRole("button", { name: "Arkistoi laite", exact: true })
     .click();
@@ -49,8 +47,11 @@ test("equipment and line lifecycle preserve history, restore without moving devi
     card.getByRole("button", { name: "Uusi huoltotyö", exact: true }),
   ).toHaveCount(0);
   await expect(
-    card.getByRole("button", { name: "Poista pysyvästi", exact: true }),
-  ).toHaveCount(0);
+    card.getByRole("button", {
+      name: "Poista lopullisesti rekisteristä",
+      exact: true,
+    }),
+  ).toBeVisible();
   await card
     .getByRole("button", { name: "Huoltohistoria", exact: true })
     .click();
@@ -112,12 +113,29 @@ test("equipment and line lifecycle preserve history, restore without moving devi
     .click();
   await page.getByRole("button", { name: /Virhelinja.*Virhelinja/ }).click();
   await page
-    .getByRole("button", { name: "Poista pysyvästi", exact: true })
+    .getByRole("button", { name: "Arkistoi tuotantolinja", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Arkistoi ja säilytä laitteet", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Arkistoidut tuotantolinjat", exact: true })
+    .click();
+  await page.getByRole("button", { name: /Virhelinja.*Virhelinja/ }).click();
+  await page
+    .getByRole("button", {
+      name: "Poista lopullisesti rekisteristä",
+      exact: true,
+    })
     .click();
   dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Virhelinja");
+  await dialog.getByRole("textbox").fill("Virhelinja");
   await dialog
-    .getByRole("button", { name: "Poista pysyvästi", exact: true })
+    .getByRole("button", {
+      name: "Poista lopullisesti rekisteristä",
+      exact: true,
+    })
     .click();
   await expect(dialog).toHaveCount(0);
   await page
@@ -128,18 +146,33 @@ test("equipment and line lifecycle preserve history, restore without moving devi
   await page.getByLabel("Sarjanumero", { exact: true }).fill("ERR-1");
   await page.getByRole("button", { name: "Tallenna", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  const empty = page
-    .locator(".equipment-card")
-    .filter({
-      has: page.getByRole("heading", { name: "Virhelaite", exact: true }),
-    });
+  const empty = page.locator(".equipment-card").filter({
+    has: page.getByRole("heading", { name: "Virhelaite", exact: true }),
+  });
   await empty
-    .getByRole("button", { name: "Poista pysyvästi", exact: true })
+    .getByRole("button", { name: "Arkistoi laite", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Arkistoi laite", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Arkistoidut laitteet", exact: true })
+    .click();
+  await empty
+    .getByRole("button", {
+      name: "Poista lopullisesti rekisteristä",
+      exact: true,
+    })
     .click();
   dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Virhelaite · ERR-1");
+  await dialog.getByRole("textbox").fill("ERR-1");
   await dialog
-    .getByRole("button", { name: "Poista pysyvästi", exact: true })
+    .getByRole("button", {
+      name: "Poista lopullisesti rekisteristä",
+      exact: true,
+    })
     .click();
   await expect(dialog).toHaveCount(0);
   await expect(empty).toHaveCount(0);
@@ -155,6 +188,9 @@ test("equipment and line lifecycle preserve history, restore without moving devi
   expect(saved.items).toEqual(s.items);
   expect(saved.assets).toHaveLength(s.assets.length);
   expect(saved.archivedProductionLines).toEqual([]);
+  await page
+    .getByRole("button", { name: "Kaikki laitteet", exact: true })
+    .click();
   await page.reload();
   await expect(card).toBeVisible();
   expect(

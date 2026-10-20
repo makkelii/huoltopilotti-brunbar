@@ -69,17 +69,6 @@ export function LifecycleActions({
           </Button>
         )
       )}
-      {deletable ? (
-        <Button
-          variant="ghost"
-          className="danger-text"
-          onClick={() => begin("delete")}
-        >
-          {t("deletePermanently")}
-        </Button>
-      ) : (
-        <small>{t("lifecycleDependencies")}</small>
-      )}
       <Dialog.Root
         open={action !== null}
         onOpenChange={(open) => {

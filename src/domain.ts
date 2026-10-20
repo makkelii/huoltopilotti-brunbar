@@ -1,5 +1,6 @@
 import type { Local } from "./i18n";
 export type ProductionLine = {
+  registryRemovedAt?: string | null;
   archivedAt?: string | null;
   canDelete?: boolean;
   id: string;
@@ -9,6 +10,7 @@ export type ProductionLine = {
   description: string;
 };
 export type Asset = {
+  registryRemovedAt?: string | null;
   archivedAt?: string | null;
   canDelete?: boolean;
   id: string;
@@ -112,6 +114,8 @@ export type Fault = {
 export type Store = {
   version: 1;
   assets: Asset[];
+  removedAssets?: Asset[];
+  removedProductionLines?: ProductionLine[];
   productionLines?: ProductionLine[];
   archivedProductionLines?: ProductionLine[];
   jobs: Job[];

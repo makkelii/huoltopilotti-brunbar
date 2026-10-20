@@ -1,5 +1,26 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  removeRegistry: [
+    "Poista lopullisesti rekisteristä",
+    "Remove permanently from registry",
+    "Endgültig aus dem Register entfernen",
+  ],
+  removedFromRegistry: [
+    "Poistettu rekisteristä",
+    "Removed from registry",
+    "Aus dem Register entfernt",
+  ],
+  confirmIdentifier: [
+    "Vahvista kirjoittamalla tunniste",
+    "Confirm by typing the identifier",
+    "Zur Bestätigung Kennung eingeben",
+  ],
+  removeRegistryExplanation: [
+    "Kohde poistuu aktiivisesta ja palautettavasta rekisteristä pysyvästi. Sitä ei voi palauttaa. Tunnistetiedot, aiemmat huollot, viat, varaosakulutukset ja auditointi säilyvät historiallisina tietoina. Uusia töitä ei voi kohdistaa tähän kohteeseen.",
+    "This record permanently leaves active and restorable registries and cannot be restored. Identity, maintenance, faults, consumption and audit evidence remain historical. New work cannot target it.",
+    "Dieser Datensatz wird unwiderruflich aus aktiven und wiederherstellbaren Registern entfernt. Identität, Wartungen, Fehler, Verbrauch und Audit bleiben historisch erhalten. Neue Aufträge sind ausgeschlossen.",
+  ],
+
   knowledgeTitle: [
     "Kunnossapidon tietopankki",
     "Maintenance knowledge base",

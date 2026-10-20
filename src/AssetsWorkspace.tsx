@@ -1,3 +1,4 @@
+import { RegistryRemoveAction } from "./RegistryRemoveAction";
 import { LifecycleActions } from "./LifecycleActions";
 import type { LifecycleRequest } from "./lifecycle";
 import { useRef, useState } from "react";
@@ -207,6 +208,16 @@ export function AssetsWorkspace({
                 )}
               </div>
               {canManage && onLifecycle && (
+                <RegistryRemoveAction
+                  entity={asset}
+                  type="asset"
+                  store={store}
+                  lang={lang}
+                  onAction={onLifecycle}
+                  errorMessage={lifecycleError}
+                />
+              )}
+              {canManage && onLifecycle && (
                 <LifecycleActions
                   entity={asset}
                   type="asset"
@@ -403,6 +414,20 @@ export function AssetsWorkspace({
                   </Button>
                 </div>
               </div>
+            )}
+            {canManage && onLifecycle && (
+              <RegistryRemoveAction
+                entity={line}
+                type="production_line"
+                store={store}
+                lang={lang}
+                onAction={async (r) => {
+                  const ok = await onLifecycle(r);
+                  if (ok) setLineId(null);
+                  return ok;
+                }}
+                errorMessage={lifecycleError}
+              />
             )}
             {canManage && onLifecycle && (
               <LifecycleActions
