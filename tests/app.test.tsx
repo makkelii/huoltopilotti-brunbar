@@ -47,7 +47,7 @@ it("creates a maintenance job", async () => {
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );
-  fireEvent.click(screen.getByRole("button", { name: /Huoltotyöt 5/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Huoltotyöt" }));
   expect(screen.getByText("New test service")).toBeInTheDocument();
 });
 it("records confirmed fault evidence and retrieves it", async () => {
@@ -85,6 +85,7 @@ it("requires human approval before changing template quantities", async () => {
   const data = completeJob(seed(), "j1", { i2: 1 }, "Confirmed repair");
   localStorage.setItem("huoltopilotti-demo-v1", JSON.stringify(data));
   render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Asetukset" }));
   fireEvent.click(screen.getByRole("button", { name: "Huoltopohjat" }));
   expect(
     JSON.parse(localStorage.getItem("huoltopilotti-demo-v1")!).templateVersion,
@@ -115,7 +116,7 @@ it("requires human approval before changing template quantities", async () => {
 it("creates a tool without quantity and hides stock columns for tools", async () => {
   const { within } = await import("@testing-library/react");
   render(<App />);
-  fireEvent.click(screen.getByRole("button", { name: "Varasto ja työkalut" }));
+  fireEvent.click(screen.getByRole("button", { name: "Varasto" }));
   fireEvent.click(screen.getByRole("button", { name: "Lisää nimike" }));
   const dialog = within(screen.getByRole("dialog"));
   expect(dialog.queryByLabelText("Määrä")).not.toBeInTheDocument();
@@ -160,7 +161,7 @@ it("preserves a legacy tool's metadata and internal values when editing without 
   Object.assign(data.items[0], { unit: "legacy unit", reserved: 1 });
   localStorage.setItem("huoltopilotti-demo-v1", JSON.stringify(data));
   render(<App />);
-  fireEvent.click(screen.getByRole("button", { name: "Varasto ja työkalut" }));
+  fireEvent.click(screen.getByRole("button", { name: "Varasto" }));
   const row = screen.getByRole("row", { name: /Momenttiavain T-014/ });
   fireEvent.click(within(row).getByRole("button", { name: "Muokkaa" }));
   const form = within(screen.getByRole("dialog"));
@@ -193,6 +194,7 @@ it("reports tools as use, with immutable snapshot names, rather than consumed qu
   data.items[0].name = "Renamed current wrench";
   localStorage.setItem("huoltopilotti-demo-v1", JSON.stringify(data));
   render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Asetukset" }));
   fireEvent.click(screen.getByRole("button", { name: "Raportit" }));
   expect(screen.getByText(/Momenttiavain T-014: Käytetty/)).toBeInTheDocument();
   expect(screen.queryByText(/Momenttiavain T-014: 1/)).not.toBeInTheDocument();

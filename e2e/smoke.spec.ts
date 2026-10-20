@@ -5,9 +5,7 @@ test("dashboard, equipment, readiness and historical troubleshooting", async ({
 }) => {
   await page.goto("?demo=1");
   await page.getByRole("button", { name: "Aloitetaan" }).click();
-  await expect(
-    page.getByRole("heading", { name: /Hyvää työpäivää/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Etusivu" })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -60,7 +58,7 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await page.getByLabel("Nimi", { exact: true }).fill("Edited CNC");
   await page.getByRole("button", { name: "Tallenna", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Edited CNC" })).toBeVisible();
-  await navigate("Huoltotyöt 4");
+  await navigate("Huoltotyöt");
   await page.getByRole("button", { name: "Uusi huoltotyö" }).click();
   await page.getByLabel("Nimi", { exact: true }).fill("Test maintenance");
   await page.getByRole("button", { name: "Tallenna", exact: true }).click();
@@ -117,7 +115,7 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
     .getByRole("button", { name: "Kirjaa valmiiksi", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await navigate("Varasto ja työkalut");
+  await navigate("Varasto");
   await expect(
     page
       .getByRole("row")
@@ -142,7 +140,8 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await expect(page.getByRole("columnheader", { name: "Määrä" })).toHaveCount(
     0,
   );
-  await navigate("Raportit");
+  await navigate("Asetukset");
+  await page.getByRole("button", { name: "Raportit", exact: true }).click();
   await expect(
     page.getByText("Verified demo completion", { exact: true }),
   ).toBeVisible();
@@ -167,7 +166,7 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
       .last(),
   ).toBeVisible();
   await page.getByRole("button", { name: "Sulje", exact: true }).click();
-  await navigate("Varasto ja työkalut");
+  await navigate("Varasto");
   await page
     .getByRole("row")
     .filter({ hasText: "SKF 6205-2RS" })

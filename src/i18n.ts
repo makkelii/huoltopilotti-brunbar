@@ -1,5 +1,125 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  skipContent: ["Siirry sisältöön", "Skip to content", "Zum Inhalt springen"],
+  confirmedRecord: [
+    "Vahvistettu havainto",
+    "Confirmed record",
+    "Bestätigter Eintrag",
+  ],
+  preferences: ["Omat asetukset", "Preferences", "Persönliche Einstellungen"],
+  primaryNavigation: ["Päänavigaatio", "Main navigation", "Hauptnavigation"],
+  navigationHelp: [
+    "Valitse näkymä. Sulje valikko Escape-näppäimellä tai sulkupainikkeella.",
+    "Choose a page. Close with Escape or the close button.",
+    "Ansicht wählen. Mit Escape oder der Schließen-Taste schließen.",
+  ],
+  workspaceLabel: [
+    "Yrityksen työtila",
+    "Company workspace",
+    "Unternehmensbereich",
+  ],
+  dashboardIntro: [
+    "Tärkeimmät työt ja seuraavat toimenpiteet yhdessä paikassa.",
+    "Your next maintenance actions, all in one place.",
+    "Die nächsten Wartungsaufgaben auf einen Blick.",
+  ],
+  jobsIntro: [
+    "Löydä työ, tarkista ohjeet ja kirjaa tehty huolto.",
+    "Find a job, review instructions and record your work.",
+    "Auftrag finden, Hinweise prüfen und Arbeit erfassen.",
+  ],
+  assetsIntro: [
+    "Laitteet, tulevat huollot ja huoltohistoria.",
+    "Equipment, upcoming maintenance and service history.",
+    "Anlagen, anstehende Wartung und Verlauf.",
+  ],
+  inventoryIntro: [
+    "Varaosat, tarvikkeet ja työkalut. Rekisterin käyttö on valinnaista huoltokirjauksissa.",
+    "Parts, supplies and tools. Registry selection is optional when recording work.",
+    "Ersatzteile, Materialien und Werkzeuge. Registerauswahl ist bei der Erfassung optional.",
+  ],
+  settingsIntro: [
+    "Työtilan asetukset, käyttäjät ja yhteiset työkalut.",
+    "Workspace preferences, people and shared tools.",
+    "Einstellungen, Benutzer und gemeinsame Werkzeuge.",
+  ],
+  workQueues: ["Työjonot", "Work queues", "Arbeitslisten"],
+  dueSoon: ["Erääntyy pian", "Due soon", "Demnächst fällig"],
+  myJobs: ["Omat työt", "My work", "Meine Aufgaben"],
+  overdueHint: [
+    "Eräpäivä on ohitettu",
+    "Past the due date",
+    "Termin überschritten",
+  ],
+  dueSoonHint: [
+    "Tänään ja seuraavat 7 päivää",
+    "Today and the next 7 days",
+    "Heute und die nächsten 7 Tage",
+  ],
+  progressHint: [
+    "Aloitetut huoltotyöt",
+    "Work already started",
+    "Begonnene Wartungsarbeiten",
+  ],
+  myJobsHint: [
+    "Sinulle osoitetut avoimet työt",
+    "Open work assigned to you",
+    "Ihnen zugewiesene offene Aufgaben",
+  ],
+  nextActions: ["Seuraavaksi tehtävänä", "Next actions", "Als Nächstes"],
+  workHistory: ["Huoltohistoria", "Service history", "Wartungsverlauf"],
+  recentCompleted: [
+    "Viimeksi valmistuneet",
+    "Recently completed",
+    "Zuletzt abgeschlossen",
+  ],
+  todayLabel: ["Tänään", "Today", "Heute"],
+  allJobs: [
+    "Kaikki huoltotyöt",
+    "All maintenance jobs",
+    "Alle Wartungsarbeiten",
+  ],
+  queueEmpty: [
+    "Ei töitä tässä työjonossa",
+    "No work in this queue",
+    "Keine Aufgaben in dieser Liste",
+  ],
+  queueEmptyHint: [
+    "Voit tarkistaa muut työjonot tai luoda uuden huoltotyön.",
+    "Check another queue or create a maintenance job.",
+    "Andere Liste prüfen oder einen Auftrag erstellen.",
+  ],
+  myJobsEmpty: [
+    "Sinulle ei ole osoitettu avoimia huoltotöitä.",
+    "You have no assigned open maintenance jobs.",
+    "Ihnen sind keine offenen Wartungsaufgaben zugewiesen.",
+  ],
+  noCompletedWork: [
+    "Ei vielä valmistuneita huoltoja",
+    "No completed work yet",
+    "Noch keine abgeschlossenen Wartungen",
+  ],
+  noCompletedWorkHint: [
+    "Valmistuneet huollot tulevat tähän, kun työ kirjataan valmiiksi.",
+    "Completed work appears here when it is recorded.",
+    "Abgeschlossene Wartungen erscheinen hier nach der Erfassung.",
+  ],
+  historyLocationHint: [
+    "Avaa huolto nähdäksesi tehdyt työt ja käytetyt tarvikkeet.",
+    "Open a job to see the work performed and items used.",
+    "Auftrag öffnen, um Arbeiten und verwendete Artikel zu sehen.",
+  ],
+  workspaceTools: [
+    "Työtilan työkalut",
+    "Workspace tools",
+    "Arbeitsbereich-Werkzeuge",
+  ],
+  workspaceToolsHint: [
+    "Raportit ja huoltopohjat ovat käytettävissä täällä. Huoltohistoria löytyy myös laitteilta ja huoltotöistä.",
+    "Reports and templates are available here. Service history also lives with equipment and jobs.",
+    "Berichte und Vorlagen finden Sie hier. Der Verlauf ist auch bei Anlagen und Aufträgen verfügbar.",
+  ],
+
   addPart: [
     "Lisää varaosa (valinnainen)",
     "Add part (optional)",
@@ -342,10 +462,10 @@ const words = {
     "Tatsächliche Mengen als neue Vorlagenversion freigeben? Anweisungen und Sicherheit vor Einsatz prüfen.",
   ],
   menu: ["Valikko", "Menu", "Menü"],
-  dashboard: ["Yleiskuva", "Overview", "Übersicht"],
+  dashboard: ["Etusivu", "Home", "Startseite"],
   assets: ["Laitteet", "Equipment", "Anlagen"],
   jobs: ["Huoltotyöt", "Maintenance", "Wartungsarbeiten"],
-  inventory: ["Varasto ja työkalut", "Inventory & tools", "Lager & Werkzeuge"],
+  inventory: ["Varasto", "Inventory", "Lager"],
   radar: ["Huoltotutka", "Fault radar", "Störungsradar"],
   reports: ["Raportit", "Reports", "Berichte"],
   settings: ["Asetukset", "Settings", "Einstellungen"],
