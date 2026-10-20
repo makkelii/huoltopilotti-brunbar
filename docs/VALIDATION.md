@@ -1,3 +1,13 @@
+# Valmistumislomakkeen hakupäivitys (20.10.2026)
+
+Ajetut tarkistukset: `npm run lint`, `npm run typecheck`, `npm test` (**70 testiä**), `npm run test:integration` (**33**, yksikkötestien osajoukko), `npm run build`, `npm run verify:build`, `npm run test:deployment` (**12**) ja `npm run test:db` (erillinen PostgreSQL 16). `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` läpäisi **16 testiä** työpöytä- ja mobiilinäkymissä.
+
+Uudet testit kattavat haun nimellä, tuotenumerolla ja tunnisteella, 5 000 demonimikkeen sivutuksen, palvelinhaun rajauksen ja enintään 26 rivin HTTP-pyynnön, aktiivisuuden ja tyyppisuodatuksen, tyhjät/hylätyt hakutulokset, uudelleenyrityksen, vanhentuneen vastauksen hylkäämisen, valinnan, määrän muokkauksen, poistamisen ja kaksoisvalinnan eston. Selaimessa testataan näppäimistövalinta, Escape ja kohdistuksen palautuminen, muuttumaton työkalusaldo, osakulutus ja pysyvä historia. Uusi SDK/HTTP-skenaario löytää tuotteen, jota ei ole sovelluksen ladatussa inventaariossa, ja tallentaa valmistumisen nykyisellä transaktio-RPC-sopimuksella.
+
+Tietokannan migraatioita, RLS:ää ja kulutustransaktiota ei muutettu. Nykyinen PostgreSQL-testaus tarkistaa edelleen organisaatiorajat, oikeudet, muuttumattoman historian ja samanaikaisen viimeisen varaosan kulutuksen. Supabasen HTTP-vastaukset on selaintesteissä mockattu: tuotannon PostgREST-palvelua, hakukyselyn suorituskykyä tai tuotantoasetuksia ei väitetä testatuiksi. Demon 5 000 tietueen testi osoittaa sivutuksen toiminnan, ei tuotantopalvelun kuormituskestoa. Käyttö ja käyttöönotto: [COMPLETION_ITEM_SELECTION.md](COMPLETION_ITEM_SELECTION.md).
+
+---
+
 # Huoltohistoria- ja yrityseristyspäivityksen testit (20.10.2026)
 
 Paikallisesti ajetut komennot: lint, typecheck, build ja verify:build; Vitest **59 testiä**, integraatio-osajoukko **22 testiä**, Playwright **14 testiä** työpöydällä ja mobiilissa sekä deployment-suojaukset **12 testiä**. `npm run test:db` suorittaa kaikki kolme migraatiota erillisessä PostgreSQL 16 -kontissa, yrityseristyksen ja samanaikaisen viimeisen varaosan kulutuksen testit sekä uuden `history.sql`-kokonaisuuden.

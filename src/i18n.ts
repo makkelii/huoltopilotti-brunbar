@@ -1,5 +1,81 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  positiveUsageQuantity: [
+    "Käytetyn määrän on oltava suurempi kuin nolla.",
+    "Quantity used must be greater than zero.",
+    "Die verwendete Menge muss größer als null sein.",
+  ],
+  inventoryUnavailable: ["Ei käytettävissä", "Unavailable", "Nicht verfügbar"],
+
+  usedSupplies: [
+    "Käytetyt varaosat ja tarvikkeet",
+    "Used parts and consumables",
+    "Verwendete Ersatzteile und Verbrauchsmaterialien",
+  ],
+  usedTools: ["Käytetyt työkalut", "Used tools", "Verwendete Werkzeuge"],
+  addUsage: ["Lisää", "Add", "Hinzufügen"],
+  removeUsage: ["Poista valinta", "Remove selection", "Auswahl entfernen"],
+  usedQuantity: ["Käytetty määrä", "Quantity used", "Verwendete Menge"],
+  pieceUnit: ["kpl", "pcs", "Stk."],
+  toolUsed: ["Käytetty", "Used", "Verwendet"],
+  partNumber: ["Tuotenumero", "Part number", "Artikelnummer"],
+  plannedSupplies: [
+    "Suunnitellut tarvikkeet",
+    "Planned supplies",
+    "Geplante Materialien",
+  ],
+  plannedNotUsed: [
+    "Suunnitelma on viite. Lisää vain oikeasti käytetyt tuotteet erikseen.",
+    "The plan is a reference. Add only items actually used separately.",
+    "Der Plan dient als Referenz. Tatsächlich verwendete Artikel separat hinzufügen.",
+  ],
+  noUsageSelected: [
+    "Ei valittuja tuotteita.",
+    "No items selected.",
+    "Keine Artikel ausgewählt.",
+  ],
+  toolsNotConsumed: [
+    "Työkalun käyttö kirjataan historiaan. Varastosaldo ei vähene.",
+    "Tool use is recorded in history. Stock is not consumed.",
+    "Werkzeugeinsatz wird protokolliert. Der Bestand wird nicht reduziert.",
+  ],
+  stockUnitHint: [
+    "Syötä määrä tuotteen rekisteriyksikössä. Yksikköä ei muunneta valmistumisen yhteydessä.",
+    "Enter quantity in the item's stock unit. Units are not converted during completion.",
+    "Menge in der Bestandseinheit eingeben. Beim Abschluss erfolgt keine Einheitenumrechnung.",
+  ],
+  searchInventory: [
+    "Hae nimellä, tuotenumerolla tai tunnisteella",
+    "Search by name, part number or ID",
+    "Nach Name, Artikelnummer oder Kennung suchen",
+  ],
+  inventorySearchHelp: [
+    "Hae ja valitse käytetty tuote. Hakutuloksissa näytetään enintään 25 tuotetta kerrallaan.",
+    "Search and select an item used. Up to 25 results are shown per page.",
+    "Verwendeten Artikel suchen und auswählen. Pro Seite werden bis zu 25 Ergebnisse angezeigt.",
+  ],
+  searchMinChars: [
+    "Kirjoita vähintään kaksi merkkiä.",
+    "Enter at least two characters.",
+    "Mindestens zwei Zeichen eingeben.",
+  ],
+  noInventoryResults: [
+    "Hakua vastaavia käytössä olevia tuotteita ei löytynyt.",
+    "No active items match your search.",
+    "Keine aktiven Artikel für diese Suche gefunden.",
+  ],
+  searchResults: ["Hakutulokset", "Search results", "Suchergebnisse"],
+  inventorySearchFailed: [
+    "Varastohaku epäonnistui. Tarkista yhteys ja yritä uudelleen.",
+    "Inventory search failed. Check your connection and retry.",
+    "Bestandssuche fehlgeschlagen. Verbindung prüfen und erneut versuchen.",
+  ],
+  retrySearch: ["Yritä uudelleen", "Retry", "Erneut versuchen"],
+  alreadySelected: ["Jo valittu", "Already selected", "Bereits ausgewählt"],
+  availableStock: ["Käytettävissä", "Available", "Verfügbar"],
+  previousResults: ["Edelliset", "Previous", "Zurück"],
+  nextResults: ["Seuraavat", "Next", "Weiter"],
+
   additionalNotes: ["Lisähuomiot", "Additional notes", "Zusätzliche Hinweise"],
   noMaintenanceHistory: [
     "Tälle laitteelle ei ole vielä valmistuneita huoltoja.",

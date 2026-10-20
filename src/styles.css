@@ -1874,3 +1874,148 @@ textarea {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Completion selects only explicit usage; registry results remain paginated. */
+.completion-items {
+  display: grid;
+  gap: 18px;
+}
+.usage-section {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.usage-heading,
+.usage-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.usage-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}
+.usage-hint,
+.planned-usage {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.usage-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.usage-description {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.usage-description small,
+.usage-result small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.usage-amount {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+.usage-amount label {
+  width: 105px;
+  margin: 0;
+}
+.usage-amount > span {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 10px;
+}
+.usage-amount small {
+  font-size: 11px;
+}
+.planned-usage summary {
+  cursor: pointer;
+  color: var(--text);
+  padding: 8px 0;
+}
+.usage-overlay {
+  z-index: 110;
+}
+.usage-dialog {
+  z-index: 111;
+}
+.usage-search {
+  position: relative;
+  margin: 18px 0 10px;
+}
+.usage-search svg {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  color: var(--muted);
+}
+.usage-search input {
+  padding-left: 38px;
+}
+.usage-results {
+  list-style: none;
+  margin: 10px 0 18px;
+  padding: 0;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+.usage-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+  text-align: left;
+  background: var(--panel);
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 6px;
+  cursor: pointer;
+  min-height: 60px;
+}
+.usage-result > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.usage-result:hover {
+  background: var(--bg);
+}
+.usage-result:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.usage-pagination {
+  margin: 10px 0 20px;
+}
+@media (max-width: 600px) {
+  .usage-row {
+    flex-wrap: wrap;
+  }
+  .usage-description {
+    flex-basis: calc(100% - 55px);
+  }
+  .usage-amount {
+    order: 3;
+    width: 100%;
+  }
+  .usage-result {
+    flex-direction: column;
+    align-items: start;
+  }
+  .usage-heading h3 {
+    font-size: 13px;
+  }
+}
