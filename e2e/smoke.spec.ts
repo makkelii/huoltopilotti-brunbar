@@ -74,6 +74,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
     page.getByText(/Tarkistuslista ei ole lupa aloittaa/),
   ).toBeVisible();
   const dialog = page.getByRole("dialog");
+  await dialog
+    .getByText("Valmistelun tilat ja muut ohjeet", { exact: true })
+    .click();
   await dialog.getByRole("combobox").first().selectOption("review");
   await expect(dialog.getByRole("combobox").first()).toHaveValue("review");
   await dialog.getByRole("button", { name: "Kirjaa valmistuminen" }).click();
