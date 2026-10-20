@@ -10,6 +10,7 @@ export function SearchSelect({
   required = false,
   name,
   lang = "fi",
+  disabled = false,
 }: {
   label: string;
   value: string;
@@ -18,6 +19,7 @@ export function SearchSelect({
   required?: boolean;
   name?: string;
   lang?: Lang;
+  disabled?: boolean;
 }) {
   const searchLabel = `${label} · ${translate(lang, "search")}`;
   const [query, setQuery] = useState("");
@@ -32,6 +34,7 @@ export function SearchSelect({
         <label>
           {searchLabel}
           <input
+            disabled={disabled}
             type="search"
             aria-label={`${searchLabel}`}
             value={query}
@@ -45,6 +48,7 @@ export function SearchSelect({
       <label>
         {label}
         <select
+          disabled={disabled}
           name={name}
           value={value}
           required={required}
@@ -89,8 +93,8 @@ export function EquipmentPicker({
   onAsset: (value: string) => void;
 }) {
   const t = (k: Parameters<typeof translate>[1]) => translate(lang, k);
-  const eligible = assets.filter((a) =>
-    inEquipmentScope(a, lines.length ? scope : "all"),
+  const eligible = assets.filter(
+    (a) => !a.archivedAt && inEquipmentScope(a, lines.length ? scope : "all"),
   );
   return (
     <fieldset className="equipment-picker">

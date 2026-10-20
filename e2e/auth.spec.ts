@@ -177,11 +177,11 @@ test("real SDK login, database read/write contract, reload persistence and sign-
     .getByRole("button", { name: "Live packing line", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Poista linja käytöstä", exact: true })
+    .getByRole("button", { name: "Arkistoi tuotantolinja", exact: true })
     .click();
   await page
     .getByRole("button", {
-      name: "Poista käytöstä ja säilytä laitteet",
+      name: "Arkistoi ja säilytä laitteet",
       exact: true,
     })
     .click();

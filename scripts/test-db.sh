@@ -25,6 +25,8 @@ docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/mi
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/production_lines_upgrade_assert.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200008_planned_requirements.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/planned_requirements.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200009_equipment_lifecycle.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/lifecycle.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/private.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/history.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/tool_stock_guard.sql
@@ -63,3 +65,20 @@ fi
 grep -q 'stale revision' work/db-tests/line-*.log
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/line-concurrency-assert.sql
 echo "PostgreSQL production-line isolation, upgrade and concurrent assignment tests passed"
+
+# New job creation and archiving the same device must share the organization lock.
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/lifecycle-concurrency-setup.sql
+(docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/lifecycle-concurrency-archive.sql > work/db-tests/lifecycle-archive.log 2>&1) &
+lifecycle_archive_process=$!
+(docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/lifecycle-concurrency-job.sql > work/db-tests/lifecycle-job.log 2>&1) &
+lifecycle_job_process=$!
+lifecycle_archive_result=0; lifecycle_job_result=0
+wait "$lifecycle_archive_process" || lifecycle_archive_result=$?
+wait "$lifecycle_job_process" || lifecycle_job_result=$?
+if { [ "$lifecycle_archive_result" -eq 0 ] && [ "$lifecycle_job_result" -eq 0 ]; } || { [ "$lifecycle_archive_result" -ne 0 ] && [ "$lifecycle_job_result" -ne 0 ]; }; then
+  cat work/db-tests/lifecycle-archive.log work/db-tests/lifecycle-job.log
+  echo "Expected exactly one concurrent archive/job to succeed"; exit 1
+fi
+grep -q 'stale revision' work/db-tests/lifecycle-*.log
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/lifecycle-concurrency-assert.sql
+echo "PostgreSQL lifecycle, role, dependency and concurrent archive/job tests passed"

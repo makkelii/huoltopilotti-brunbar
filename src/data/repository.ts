@@ -1,3 +1,4 @@
+import type { LifecycleRequest } from "../lifecycle";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   inventoryPageSize,
@@ -81,6 +82,19 @@ export class Repository {
     if (error) throw new RepositoryError(error.code || "load");
     if (!data?.store) throw new RepositoryError("load");
     return data as Snapshot;
+  }
+  async lifecycle(
+    current: Snapshot,
+    request: LifecycleRequest,
+  ): Promise<Snapshot> {
+    const { error } = await this.client.rpc("private_mutate", {
+      p_org: this.organizationId,
+      p_revision: current.revision,
+      p_kind: request.kind,
+      p_data: request.data,
+    });
+    if (error) throw new RepositoryError(error.code || "save");
+    return this.load();
   }
   async save(current: Snapshot, next: Store): Promise<Snapshot> {
     const before = current.store;

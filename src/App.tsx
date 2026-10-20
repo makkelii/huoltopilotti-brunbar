@@ -1,3 +1,4 @@
+import { applyLifecycle, type LifecycleRequest } from "./lifecycle";
 import type { Requirement } from "./domain";
 import {
   EquipmentPicker,
@@ -7,7 +8,7 @@ import {
 } from "./EquipmentPicker";
 import { RequirementsEditor } from "./RequirementsEditor";
 import { AssetsWorkspace } from "./AssetsWorkspace";
-import { saveProductionLine, archiveProductionLine } from "./productionLines";
+import { saveProductionLine } from "./productionLines";
 import { Dashboard } from "./Dashboard";
 import { workshopDate } from "./dashboard";
 import { AppNavigation, isPage, type Page } from "./AppNavigation";
@@ -240,7 +241,10 @@ export default function App({
     window.addEventListener("hashchange", apply);
     return () => window.removeEventListener("hashchange", apply);
   }, []);
-  const change = async (next: Store): Promise<boolean> => {
+  const change = async (
+    next: Store,
+    lifecycle?: LifecycleRequest,
+  ): Promise<boolean> => {
     if (!repository) {
       setStore(next);
       setToast(t("saved"));
@@ -251,7 +255,9 @@ export default function App({
     setSaving(true);
     setError("");
     try {
-      const result = await repository.save(snapshotRef.current, next);
+      const result = lifecycle
+        ? await repository.lifecycle(snapshotRef.current, lifecycle)
+        : await repository.save(snapshotRef.current, next);
       snapshotRef.current = result;
       setStore(result.store);
       setToast(t("serverSaved"));
@@ -263,7 +269,13 @@ export default function App({
             ? "conflict"
             : e instanceof RepositoryError && e.code === "23505"
               ? "duplicateLineIdentifier"
-              : "saveError",
+              : e instanceof RepositoryError && e.code === "23503"
+                ? "lifecycleDependencies"
+                : e instanceof RepositoryError && e.code === "55006"
+                  ? "archiveOpenJobs"
+                  : e instanceof RepositoryError && e.code === "55000"
+                    ? "lifecycleUnavailable"
+                    : "saveError",
         ),
       );
       return false;
@@ -272,6 +284,24 @@ export default function App({
       setSaving(false);
     }
   };
+  async function lifecycle(request: LifecycleRequest) {
+    try {
+      return await change(applyLifecycle(store, request), request);
+    } catch (e) {
+      setError(
+        t(
+          e instanceof Error && e.message === "openJobs"
+            ? "archiveOpenJobs"
+            : e instanceof Error && e.message === "duplicate"
+              ? "duplicateLineIdentifier"
+              : e instanceof Error && e.message === "dependencies"
+                ? "lifecycleDependencies"
+                : "lifecycleUnavailable",
+        ),
+      );
+      return false;
+    }
+  }
   async function refresh() {
     if (!repository || savingRef.current) return;
     const revisionAtStart = snapshotRef.current?.revision;
@@ -310,7 +340,7 @@ export default function App({
       setError(t("accessError"));
       return;
     }
-    if (kind === "job" && !store.assets.length) {
+    if (kind === "job" && !store.assets.some((a) => !a.archivedAt)) {
       setError(t("noEquipment"));
       return;
     }
@@ -319,7 +349,7 @@ export default function App({
       const previous = entry as Job | null;
       if (previous?.status === "completed") return;
       const selectedAsset = store.assets.find(
-        (a) => a.id === (previous?.assetId || assetId),
+        (a) => !a.archivedAt && a.id === (previous?.assetId || assetId),
       );
       setJobAsset(selectedAsset?.id || "");
       setJobScope(
@@ -415,6 +445,16 @@ export default function App({
       };
       ok = await change({
         ...store,
+        ...(!repository
+          ? {
+              productionLines: store.productionLines?.map((l) =>
+                store.assets.some((a) => a.productionLineId === l.id) ||
+                asset.productionLineId === l.id
+                  ? { ...l, canDelete: false }
+                  : l,
+              ),
+            }
+          : {}),
         assets: editing
           ? store.assets.map((a) => (a.id === entryId ? asset : a))
           : [...store.assets, asset],
@@ -424,6 +464,7 @@ export default function App({
       if (
         !store.assets.some(
           (a) =>
+            !a.archivedAt &&
             a.id === jobAsset &&
             inEquipmentScope(
               a,
@@ -485,6 +526,10 @@ export default function App({
           : [...store.items, item],
       });
     } else if (modal === "fault") {
+      if (!store.assets.some((a) => a.id === s("assetId") && !a.archivedAt)) {
+        setError(t("lifecycleUnavailable"));
+        return;
+      }
       const text = s("name"),
         cause = s("cause");
       ok = await change({
@@ -615,7 +660,12 @@ export default function App({
                         <span className="badge high">{t("high")}</span>
                       )}
                     </strong>
-                    <small>{assetName(j.assetId)} </small>
+                    <small>
+                      {assetName(j.assetId)}{" "}
+                      {store.assets.find((a) => a.id === j.assetId)?.archivedAt
+                        ? ` · ${t("archived")}`
+                        : ""}
+                    </small>
                     {j.status !== "completed" && (
                       <small>
                         {
@@ -825,7 +875,7 @@ export default function App({
               (!live || snapshotRef.current?.role !== "viewer") && (
                 <Button
                   onClick={() => {
-                    if (!store.assets.length) {
+                    if (!store.assets.some((a) => !a.archivedAt)) {
                       setError(t("noEquipment"));
                       return;
                     }
@@ -954,7 +1004,12 @@ export default function App({
                   onChange={setListAsset}
                   options={store.assets
                     .filter((a) => inEquipmentScope(a, listScope))
-                    .map((a) => ({ value: a.id, label: equipmentLabel(a) }))}
+                    .map((a) => ({
+                      value: a.id,
+                      label:
+                        equipmentLabel(a) +
+                        (a.archivedAt ? ` · ${t("archived")}` : ""),
+                    }))}
                 />
                 <label className="checkbox-label">
                   <input
@@ -1010,9 +1065,14 @@ export default function App({
               onClearSearch={() => setQuery("")}
               onCreateLine={() => open("line")}
               onEditLine={(line) => open("line", line)}
-              onArchiveLine={async (line) =>
-                change(archiveProductionLine(store, line.id))
+              onArchiveLine={(line) =>
+                lifecycle({
+                  kind: "production_line_archive",
+                  data: { id: line.id },
+                })
               }
+              onLifecycle={lifecycle}
+              lifecycleError={error}
               onCreateAsset={(lineId) => open("asset", null, lineId)}
               onEditAsset={(asset) => open("asset", asset)}
               onHistory={(asset) => setHistoryAsset(asset.id)}
@@ -1169,7 +1229,13 @@ export default function App({
                               }).format(new Date(fault.date))
                             : "—"}
                         </span>
-                        <h2>{assetName(fault.assetId)}</h2>
+                        <h2>
+                          {assetName(fault.assetId)}{" "}
+                          {store.assets.find((a) => a.id === fault.assetId)
+                            ?.archivedAt && (
+                            <span className="badge">{t("archived")}</span>
+                          )}
+                        </h2>
                         <p>{local(fault.symptoms, lang)}</p>
                         <h3>{t("cause")}</h3>
                         <p>{local(fault.cause, lang)}</p>
@@ -1595,11 +1661,13 @@ export default function App({
                       <label>
                         {t("equipment")}
                         <select required name="assetId">
-                          {store.assets.map((a) => (
-                            <option value={a.id} key={a.id}>
-                              {a.name}
-                            </option>
-                          ))}
+                          {store.assets
+                            .filter((a) => !a.archivedAt)
+                            .map((a) => (
+                              <option value={a.id} key={a.id}>
+                                {a.name}
+                              </option>
+                            ))}
                         </select>
                       </label>
                       <label>
@@ -1990,7 +2058,10 @@ export default function App({
                   variant="outline"
                   onClick={() => navigateEquipment({ assetId: chosen.assetId })}
                 >
-                  {t("equipment")}: {assetName(chosen.assetId)}
+                  {t("equipment")}: {assetName(chosen.assetId)}{" "}
+                  {store.assets.find((a) => a.id === chosen.assetId)?.archivedAt
+                    ? ` · ${t("archived")}`
+                    : ""}
                 </Button>
                 {store.productionLines
                   ?.filter(

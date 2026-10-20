@@ -1,5 +1,79 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  archived: ["Arkistoitu", "Archived", "Archiviert"],
+  archivedAssets: [
+    "Arkistoidut laitteet",
+    "Archived equipment",
+    "Archivierte Anlagen",
+  ],
+  archivedLines: [
+    "Arkistoidut tuotantolinjat",
+    "Archived production lines",
+    "Archivierte Produktionslinien",
+  ],
+  archiveAsset: ["Arkistoi laite", "Archive equipment", "Anlage archivieren"],
+  restoreAsset: [
+    "Palauta aktiiviseksi",
+    "Restore to active",
+    "Wieder aktivieren",
+  ],
+  restoreLine: [
+    "Palauta tuotantolinja",
+    "Restore production line",
+    "Produktionslinie wiederherstellen",
+  ],
+  deletePermanently: [
+    "Poista pysyvästi",
+    "Delete permanently",
+    "Dauerhaft löschen",
+  ],
+  noSerial: ["Ei sarjanumeroa", "No serial number", "Keine Seriennummer"],
+  noLineIdentifier: [
+    "Ei linjatunnistetta",
+    "No line identifier",
+    "Keine Linienkennung",
+  ],
+  archiveAssetExplanation: [
+    "Laite poistuu aktiivisista listoista ja uusien töiden valinnoista. Tunnistetiedot, huoltohistoria ja vikahistoria säilyvät. Laitteen voi palauttaa myöhemmin.",
+    "Equipment leaves active lists and new job selections. Identity, maintenance and fault history are retained. You can restore it later.",
+    "Die Anlage verschwindet aus aktiven Listen und neuen Aufträgen. Identität, Wartungs- und Fehlerhistorie bleiben erhalten. Eine Wiederherstellung ist möglich.",
+  ],
+  restoreAssetExplanation: [
+    "Valitse aktiivinen tuotantolinja tai jätä laite ilman linjaa. Vanha historia säilyy.",
+    "Choose an active production line or leave equipment unassigned. Existing history is retained.",
+    "Wählen Sie eine aktive Linie oder lassen Sie die Anlage ohne Zuordnung. Die Historie bleibt erhalten.",
+  ],
+  restoreLineExplanation: [
+    "Linja palautuu aktiiviseksi. Arkistoinnissa irrotettuja laitteita ei siirretä takaisin: liitä ne tarvittaessa erikseen. Tunnisteen on oltava vapaa.",
+    "The line becomes active. Detached equipment is not moved back automatically; assign it separately if needed. The identifier must be available.",
+    "Die Linie wird aktiv. Abgetrennte Anlagen werden nicht automatisch zurückversetzt. Ordnen Sie sie bei Bedarf separat zu. Die Kennung muss verfügbar sein.",
+  ],
+  deleteExplanation: [
+    "Tämä riippuvuuksista vapaa kohde poistetaan pysyvästi rekisteristä. Toimintoa ei voi perua. Auditointitieto ja kohteen tunnistetiedot säilyvät auditissa. Laitteita, huoltoja, vikahavaintoja tai historiaa ei poisteta tämän mukana.",
+    "This unreferenced record is permanently removed and cannot be restored. Audit evidence and identity are retained in the audit log. No equipment, maintenance, fault or history records are removed with it.",
+    "Dieser Datensatz ohne Abhängigkeiten wird unwiderruflich gelöscht. Auditnachweis und Identität bleiben erhalten. Anlagen, Wartungen, Fehler und Historie werden nicht mitgelöscht.",
+  ],
+  lifecycleDependencies: [
+    "Pysyvä poisto estetty: kohteella on säilytettäviä viittauksia. Käytä arkistointia.",
+    "Permanent deletion is blocked by retained references. Use archiving.",
+    "Dauerhaftes Löschen ist wegen erhaltenswerter Verweise gesperrt. Verwenden Sie die Archivierung.",
+  ],
+  archiveOpenJobs: [
+    "Laitetta ei voi arkistoida, koska sillä on avoimia huoltotöitä. Käsittele työt ensin. Toistuvassa työssä poista ensin toisto tarvittaessa.",
+    "Open maintenance jobs prevent archiving. Handle the jobs first; disable recurrence if needed.",
+    "Offene Wartungsaufträge verhindern die Archivierung. Bearbeiten Sie diese zuerst und deaktivieren Sie bei Bedarf die Wiederholung.",
+  ],
+  lifecycleUnavailable: [
+    "Kohde ei ole käytettävissä. Päivitä tiedot ja tarkista arkistotila sekä tuotantolinja.",
+    "Record unavailable. Refresh and check archive state and production line.",
+    "Datensatz nicht verfügbar. Aktualisieren Sie die Daten und prüfen Sie Archivstatus und Linie.",
+  ],
+  lifecycleFailed: [
+    "Toiminto ei tallentunut. Tarkista näkymän virheilmoitus. Valinnat säilyivät.",
+    "The operation was not saved. Check the error shown in the view. Your selections are retained.",
+    "Der Vorgang wurde nicht gespeichert. Prüfen Sie die Fehlermeldung. Die Auswahl bleibt erhalten.",
+  ],
+
   plannedName: [
     "Tarpeen nimi tai ohje",
     "Requirement name or instruction",
@@ -72,14 +146,14 @@ const words = {
     "Linienkennung (optional)",
   ],
   archiveProductionLine: [
-    "Poista linja käytöstä",
-    "Retire production line",
-    "Produktionslinie stilllegen",
+    "Arkistoi tuotantolinja",
+    "Archive production line",
+    "Produktionslinie archivieren",
   ],
   confirmArchiveLine: [
-    "Poista käytöstä ja säilytä laitteet",
-    "Retire and keep equipment",
-    "Stilllegen und Anlagen behalten",
+    "Arkistoi ja säilytä laitteet",
+    "Archive and keep equipment",
+    "Archivieren und Anlagen behalten",
   ],
   archiveLineExplanation: [
     "Linja arkistoidaan. Laitteet siirtyvät ilman tuotantolinjaa oleviin laitteisiin. Huoltotyöt ja historia säilyvät.",
