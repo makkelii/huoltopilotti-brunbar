@@ -2019,3 +2019,33 @@ textarea {
     font-size: 13px;
   }
 }
+
+.history-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+.history-facts dt {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+.history-facts dd {
+  margin: 0.25rem 0;
+}
+.history-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.history-entry {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  overflow-wrap: anywhere;
+}
+.manual-usage {
+  display: grid;
+  gap: 1rem;
+}
+.manual-usage input {
+  width: 100%;
+  min-height: 44px;
+}

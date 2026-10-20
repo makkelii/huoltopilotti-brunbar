@@ -78,8 +78,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await dialog.getByRole("button", { name: "Kirjaa valmistuminen" }).click();
   await expect(dialog.getByRole("spinbutton")).toHaveCount(1);
   await dialog
-    .getByRole("button", { name: "Lisää · Käytetyt varaosat ja tarvikkeet" })
+    .getByRole("button", { name: "Lisää varaosa (valinnainen)" })
     .click();
+  await page.getByRole("button", { name: "Valitse rekisteristä" }).click();
   await page.getByRole("searchbox").fill("SKF");
   await page.getByRole("button", { name: /SKF 6205-2RS.*Tuotenumero/ }).click();
   await dialog.getByLabel("Käytetty määrä · SKF 6205-2RS").fill("0.5");
@@ -87,14 +88,16 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
     .getByRole("button", { name: "Poista valinta · SKF 6205-2RS" })
     .click();
   await dialog
-    .getByRole("button", { name: "Lisää · Käytetyt varaosat ja tarvikkeet" })
+    .getByRole("button", { name: "Lisää varaosa (valinnainen)" })
     .click();
+  await page.getByRole("button", { name: "Valitse rekisteristä" }).click();
   await page.getByRole("searchbox").fill("SKF");
   await page.getByRole("button", { name: /SKF 6205-2RS.*Tuotenumero/ }).click();
   await dialog.getByLabel("Käytetty määrä · SKF 6205-2RS").fill("1");
   await dialog
-    .getByRole("button", { name: "Lisää · Käytetyt työkalut" })
+    .getByRole("button", { name: "Lisää työkalu (valinnainen)" })
     .click();
+  await page.getByRole("button", { name: "Valitse rekisteristä" }).click();
   await page.getByRole("searchbox").fill("Momenttiavain");
   await page.getByRole("searchbox").press("Tab");
   const toolResult = page.getByRole("button", {
@@ -109,10 +112,10 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+  await dialog.getByLabel("Tehdyt työt").fill("Verified demo completion");
   await dialog
-    .getByLabel("Muistiinpanot / vahvistettu korjaus")
-    .fill("Verified demo completion");
-  await dialog.getByRole("button", { name: "Vahvista", exact: true }).click();
+    .getByRole("button", { name: "Kirjaa valmiiksi", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await navigate("Varasto ja työkalut");
   await expect(
@@ -131,9 +134,8 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   ).toHaveText("");
   const toolQuantity = await page.evaluate(() => {
     const saved = JSON.parse(localStorage.getItem("huoltopilotti-demo-v1")!);
-    return saved.items.find(
-      (item: { id: string }) => item.id === "i1",
-    ).quantity;
+    return saved.items.find((item: { id: string }) => item.id === "i1")
+      .quantity;
   });
   expect(toolQuantity).toBe(2);
   await page.getByLabel("Tyyppi").selectOption("tools");
@@ -141,11 +143,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
     0,
   );
   await navigate("Raportit");
-  await page.getByRole("button", { name: /Revised maintenance/ }).click();
   await expect(
     page.getByText("Verified demo completion", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Sulje", exact: true }).click();
   await navigate("Laitteet");
   await page.reload();
   await page

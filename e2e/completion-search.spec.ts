@@ -123,6 +123,11 @@ test("authenticated completion searches the server for an uncached part and pres
       expect(payload.p_data.actual).toEqual({ [partId]: 2.5, [toolId]: 1 });
       expect(payload.p_data.notes).toBe("Verified server completion");
       expect(payload.p_data.actualMinutes).toBe(45);
+      expect(payload.p_data.freeUsage).toEqual([
+        { type: "tools", name: "Oma avain" },
+        { type: "tools", name: "Pihdit" },
+        { type: "parts", name: "Oma tiiviste", quantity: 2.5 },
+      ]);
       completions++;
       snapshot.store.jobs[0] = {
         ...snapshot.store.jobs[0],
@@ -130,7 +135,9 @@ test("authenticated completion searches the server for an uncached part and pres
         notes: payload.p_data.notes,
         actual: payload.p_data.actual,
         actualMinutes: 45,
-        completedAt: new Date().toISOString(),
+        freeUsage: payload.p_data.freeUsage,
+        performedBy: "Asentaja",
+        completedAt: "2026-10-20T05:29:00Z",
         usedItems: [
           {
             id: toolId,
@@ -179,28 +186,32 @@ test("authenticated completion searches the server for an uncached part and pres
   await page.getByRole("button", { name: "Kirjaa valmistuminen" }).click();
   expect(searches).toBe(0);
   await page
-    .getByRole("button", { name: "Lisää · Käytetyt varaosat ja tarvikkeet" })
+    .getByRole("button", { name: "Lisää varaosa (valinnainen)" })
     .click();
-  await expect(page.getByRole("searchbox")).toBeFocused();
+  await page.getByRole("button", { name: "Valitse rekisteristä" }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(
     page.getByRole("button", {
-      name: "Lisää · Käytetyt varaosat ja tarvikkeet",
+      name: "Lisää varaosa (valinnainen)",
     }),
   ).toBeFocused();
   await page
-    .getByRole("button", { name: "Lisää · Käytetyt varaosat ja tarvikkeet" })
+    .getByRole("button", { name: "Lisää varaosa (valinnainen)" })
     .click();
 
   expect(searches).toBe(0);
+  await page.getByRole("button", { name: "Valitse rekisteristä" }).click();
   await page.getByRole("searchbox").fill("ERP-42");
   await page
     .getByRole("button", { name: /Bulk lubricant.*Tuotenumero/ })
     .click();
   await page.getByLabel("Käytetty määrä · Bulk lubricant").fill("2.5");
   await expect(page.getByText("kg", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Lisää · Käytetyt työkalut" }).click();
+  await page
+    .getByRole("button", { name: "Lisää työkalu (valinnainen)" })
+    .click();
+  await page.getByRole("button", { name: "Valitse rekisteristä" }).click();
   await page.getByRole("searchbox").fill("TOOL-42");
   const tool = page.getByRole("button", {
     name: /Calibrated wrench.*Tuotenumero/,
@@ -212,11 +223,27 @@ test("authenticated completion searches the server for an uncached part and pres
   await expect(
     page.getByLabel("Käytetty määrä · Calibrated wrench"),
   ).toHaveCount(0);
-  await page.getByLabel("Käytetty aika (min)").fill("45");
+  for (const name of ["Oma avain", "Pihdit"]) {
+    await page
+      .getByRole("button", { name: "Lisää työkalu (valinnainen)" })
+      .click();
+    const entry = page.getByRole("dialog").last();
+    await expect(entry.getByRole("spinbutton")).toHaveCount(0);
+    await entry.getByLabel("Nimi", { exact: true }).fill(name);
+    await entry.getByRole("button", { name: "Lisää", exact: true }).click();
+  }
   await page
-    .getByLabel("Muistiinpanot / vahvistettu korjaus")
-    .fill("Verified server completion");
-  await page.getByRole("button", { name: "Vahvista", exact: true }).click();
+    .getByRole("button", { name: "Lisää varaosa (valinnainen)" })
+    .click();
+  const entry = page.getByRole("dialog").last();
+  await entry.getByLabel("Nimi", { exact: true }).fill("Oma tiiviste");
+  await entry.getByLabel("Käytetty määrä", { exact: true }).fill("2.5");
+  await entry.getByRole("button", { name: "Lisää", exact: true }).click();
+  await page.getByLabel("Käytetty aika (min)").fill("45");
+  await page.getByLabel("Tehdyt työt").fill("Verified server completion");
+  await page
+    .getByRole("button", { name: "Kirjaa valmiiksi", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(completions).toBe(1);
   expect(searches).toBe(2);
@@ -225,8 +252,20 @@ test("authenticated completion searches the server for an uncached part and pres
   await expect(
     page.getByText("Verified server completion", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Bulk lubricant · LUB-42: 2.5 kg")).toBeVisible();
+  await expect(page.getByText("Bulk lubricant: 2.5 kg")).toBeVisible();
+  await expect(page.getByText("Calibrated wrench: Käytetty")).toBeVisible();
+  await expect(page.getByText("Oma avain", { exact: true })).toBeVisible();
+  await expect(page.getByText("Pihdit", { exact: true })).toBeVisible();
+  await expect(page.getByText("Oma tiiviste: 2.5 kpl")).toBeVisible();
+  await expect(page.getByText("20.10.2026 klo 08.29")).toBeVisible();
   await expect(
-    page.getByText("Calibrated wrench · TOOL-42: Käytetty"),
-  ).toBeVisible();
+    page.getByText(/Tarkistuslista ei ole lupa aloittaa/),
+  ).toHaveCount(0);
+  await expect(page.getByRole("dialog")).not.toContainText(partId);
+  await expect(page.getByRole("dialog")).not.toContainText("2026-10-20T");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
 });

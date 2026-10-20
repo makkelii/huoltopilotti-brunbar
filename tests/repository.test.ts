@@ -34,7 +34,14 @@ it("uses guarded transactional completion rather than browser inventory upserts"
       p_org: "org",
       p_revision: 7,
       p_kind: "complete",
-      p_data: { id: "j1", actual: { i2: 1 }, notes: "Confirmed" },
+      p_data: {
+        id: "j1",
+        actual: { i2: 1 },
+        notes: "Confirmed",
+        freeUsage: [],
+        actualMinutes: undefined,
+        completionNotes: undefined,
+      },
     },
   ]);
 });
@@ -67,5 +74,39 @@ it("does not send full snapshots or unrelated records when editing equipment", a
   expect(rpc.mock.calls[0]).toEqual([
     "private_mutate",
     { p_org: "org", p_revision: 7, p_kind: "asset", p_data: next.assets[0] },
+  ]);
+});
+
+it("sends manual usage separately from registry quantities in the same completion", async () => {
+  const before = snapshot();
+  const next = structuredClone(before.store);
+  next.jobs[0] = {
+    ...next.jobs[0],
+    status: "completed",
+    actual: { i2: 1 },
+    notes: "Done",
+    actualMinutes: 25,
+    freeUsage: [
+      { type: "tools", name: "Own wrench" },
+      { type: "parts", name: "Seal", quantity: 2 },
+    ],
+  };
+  const rpc = vi.fn(async (name: string) => ({
+    data: name === "private_snapshot" ? before : null,
+    error: null,
+  }));
+  await new Repository({ rpc } as unknown as SupabaseClient, "org").save(
+    before,
+    next,
+  );
+  expect(rpc.mock.calls[0]).toEqual([
+    "private_mutate",
+    expect.objectContaining({
+      p_data: expect.objectContaining({
+        actual: { i2: 1 },
+        freeUsage: next.jobs[0].freeUsage,
+        actualMinutes: 25,
+      }),
+    }),
   ]);
 });

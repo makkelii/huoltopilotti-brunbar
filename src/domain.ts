@@ -35,6 +35,34 @@ export type Requirement = {
   quantity: number;
   state: "unchecked" | "ready" | "needs" | "review";
 };
+export type FreeUsage =
+  | { type: "tools"; name: string }
+  | { type: "parts"; name: string; quantity: number };
+
+export function normalizeFreeUsage(entries: FreeUsage[]): FreeUsage[] {
+  if (!Array.isArray(entries) || entries.length > 100)
+    throw Error("invalid usage");
+  return entries.map((entry) => {
+    if (
+      !entry ||
+      typeof entry.name !== "string" ||
+      !entry.name.trim() ||
+      entry.name.trim().length > 200
+    )
+      throw Error("invalid usage");
+    if (entry.type === "tools")
+      return { type: "tools", name: entry.name.trim() };
+    if (
+      entry.type !== "parts" ||
+      !Number.isFinite(entry.quantity) ||
+      entry.quantity <= 0 ||
+      entry.quantity > 100000000
+    )
+      throw Error("invalid usage");
+    return { type: "parts", name: entry.name.trim(), quantity: entry.quantity };
+  });
+}
+
 export type Job = {
   id: string;
   name: string;
@@ -54,6 +82,8 @@ export type Job = {
   actualMinutes?: number;
   completionNotes?: string;
   performedBy?: string;
+  assetName?: string;
+  freeUsage?: FreeUsage[];
   usedItems?: (Item & { usedQuantity: number })[];
 };
 export type Fault = {
@@ -120,6 +150,7 @@ export function completeJob(
   actualMinutes = store.jobs.find((j) => j.id === jobId)?.duration || 0,
   performedBy?: string,
   completionNotes = "",
+  freeUsage: FreeUsage[] = [],
 ): Store {
   const job = store.jobs.find((j) => j.id === jobId);
   if (
@@ -141,6 +172,8 @@ export function completeJob(
     )
       throw Error("stock");
   }
+  const usage = normalizeFreeUsage(freeUsage);
+  if (!notes.trim() || !Number.isInteger(actualMinutes)) throw Error("invalid");
   const nextJobs =
     job.recurrence > 0
       ? [
@@ -162,6 +195,8 @@ export function completeJob(
             actual: {},
             completedAt: undefined,
             usedItems: undefined,
+            freeUsage: undefined,
+            assetName: undefined,
             actualMinutes: undefined,
             completionNotes: undefined,
             performedBy: undefined,
@@ -183,6 +218,8 @@ export function completeJob(
               status: "completed" as const,
               actual,
               actualMinutes,
+              freeUsage: usage,
+              assetName: store.assets.find((a) => a.id === job.assetId)?.name,
               completionNotes,
               performedBy: performedBy || job.technician,
               usedItems: store.items
