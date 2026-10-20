@@ -60,6 +60,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await expect(page.getByRole("heading", { name: "Edited CNC" })).toBeVisible();
   await navigate("Huoltotyöt");
   await page.getByRole("button", { name: "Uusi huoltotyö" }).click();
+  await page
+    .getByRole("combobox", { name: "Laite", exact: true })
+    .selectOption("a1");
   await page.getByLabel("Nimi", { exact: true }).fill("Test maintenance");
   await page.getByRole("button", { name: "Tallenna", exact: true }).click();
   const row = page.getByRole("row").filter({ hasText: "Test maintenance" });

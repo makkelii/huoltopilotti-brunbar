@@ -248,6 +248,9 @@ test("authenticated completion searches the server for an uncached part and pres
   expect(completions).toBe(1);
   expect(searches).toBe(2);
   await page.reload();
+  await page
+    .getByRole("combobox", { name: "Tila", exact: true })
+    .selectOption("completed");
   await page.getByRole("button", { name: /Server search maintenance/ }).click();
   await expect(
     page.getByText("Verified server completion", { exact: true }),

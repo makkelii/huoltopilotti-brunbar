@@ -53,6 +53,9 @@ test("manual-only completion works with an empty registry, retains safety during
   expect(saved.items).toEqual([]);
   expect(saved.jobs[0].freeUsage).toHaveLength(2);
   await page.reload();
+  await page
+    .getByRole("combobox", { name: "Tila", exact: true })
+    .selectOption("completed");
   await page.getByRole("button", { name: /Oman osan huolto/ }).click();
   dialog = page.getByRole("dialog");
   await expect(dialog).toContainText(
