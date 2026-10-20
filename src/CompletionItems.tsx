@@ -205,6 +205,12 @@ export function CompletionItems({
           <Dialog.Overlay className="dialog-overlay usage-overlay" />
           <Dialog.Content
             className="dialog usage-dialog"
+            onEscapeKeyDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              activeSearch.current++;
+              setGroup(null);
+            }}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               opener.current?.focus();

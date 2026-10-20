@@ -145,7 +145,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await navigate("Raportit");
   await page.getByRole("button", { name: /Revised maintenance/ }).click();
   await expect(
-    page.getByText("Verified demo completion", { exact: true }),
+    page
+      .getByRole("dialog")
+      .getByText("Verified demo completion", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Sulje", exact: true }).click();
   await navigate("Laitteet");
@@ -160,7 +162,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
     .getByRole("button", { name: /Revised maintenance/ })
     .click();
   await expect(
-    page.getByText("Verified demo completion", { exact: true }),
+    page
+      .getByRole("dialog")
+      .getByText("Verified demo completion", { exact: true }),
   ).toBeVisible();
   await expect(
     page
