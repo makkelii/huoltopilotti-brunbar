@@ -77,6 +77,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await expect(dialog.getByRole("combobox").first()).toHaveValue("review");
   await dialog.getByRole("button", { name: "Kirjaa valmistuminen" }).click();
   await expect(dialog.getByRole("spinbutton")).toHaveCount(1);
+  await page
+    .getByText("Valitse varastosta tai työkalurekisteristä", { exact: true })
+    .click();
   await dialog
     .getByRole("button", { name: "Lisää · Käytetyt varaosat ja tarvikkeet" })
     .click();
@@ -109,10 +112,10 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+  await dialog.getByLabel("Tehdyt työt").fill("Verified demo completion");
   await dialog
-    .getByLabel("Muistiinpanot / vahvistettu korjaus")
-    .fill("Verified demo completion");
-  await dialog.getByRole("button", { name: "Vahvista", exact: true }).click();
+    .getByRole("button", { name: "Kirjaa valmiiksi", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await navigate("Varasto ja työkalut");
   await expect(
@@ -131,9 +134,8 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   ).toHaveText("");
   const toolQuantity = await page.evaluate(() => {
     const saved = JSON.parse(localStorage.getItem("huoltopilotti-demo-v1")!);
-    return saved.items.find(
-      (item: { id: string }) => item.id === "i1",
-    ).quantity;
+    return saved.items.find((item: { id: string }) => item.id === "i1")
+      .quantity;
   });
   expect(toolQuantity).toBe(2);
   await page.getByLabel("Tyyppi").selectOption("tools");

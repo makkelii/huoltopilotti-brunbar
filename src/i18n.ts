@@ -1,5 +1,36 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  workDone: ["Tehdyt työt", "Work done", "Ausgeführte Arbeiten"],
+  completedOn: ["Suoritettu", "Completed", "Abgeschlossen"],
+  notRecorded: ["Ei kirjattu", "Not recorded", "Nicht erfasst"],
+  unnamedHistoricalItem: [
+    "Aiemmin kirjattu nimike",
+    "Previously recorded item",
+    "Früher erfasster Artikel",
+  ],
+  addFreePart: ["Lisää varaosa", "Add part", "Ersatzteil hinzufügen"],
+  addFreeTool: ["Lisää työkalu", "Add tool", "Werkzeug hinzufügen"],
+  chooseFromRegistry: [
+    "Valitse varastosta tai työkalurekisteristä",
+    "Choose from stock or tool registry",
+    "Aus Bestand oder Werkzeugregister wählen",
+  ],
+  freeUsageHint: [
+    "Tallentuu tähän huoltoon. Varastosaldo ei muutu.",
+    "Saved to this maintenance. Stock is unchanged.",
+    "Wird für diese Wartung gespeichert. Bestand bleibt unverändert.",
+  ],
+  recordComplete: [
+    "Kirjaa valmiiksi",
+    "Record completion",
+    "Abschluss speichern",
+  ],
+  completionSaved: [
+    "Huolto kirjattu valmiiksi.",
+    "Maintenance recorded as completed.",
+    "Wartung als abgeschlossen gespeichert.",
+  ],
+
   positiveUsageQuantity: [
     "Käytetyn määrän on oltava suurempi kuin nolla.",
     "Quantity used must be greater than zero.",

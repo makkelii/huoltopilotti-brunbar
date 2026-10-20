@@ -2019,3 +2019,14 @@ textarea {
     font-size: 13px;
   }
 }
+
+.maintenance-summary { display: grid; gap: 1.25rem; padding-top: 1rem; }
+.history-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 0; }
+.history-facts dt { color: var(--muted); font-size: .85rem; }
+.history-facts dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
+.preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
+.free-usage-row { border: 1px solid var(--border); border-radius: .75rem; margin: 1rem 0; padding: 1rem; min-width: 0; }
+.free-usage-row label { display: grid; gap: .35rem; }
+.free-usage-row small { display: block; margin: .6rem 0; }
+.completion summary { cursor: pointer; padding: .75rem 0; }
+@media (max-width: 600px) { .history-facts { grid-template-columns: 1fr; } .free-usage .button-row { display: grid; grid-template-columns: 1fr; } }

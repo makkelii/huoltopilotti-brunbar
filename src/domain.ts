@@ -1,3 +1,4 @@
+import { validateFreeUsage, type FreeUsage } from "./completionUsage";
 import type { Local } from "./i18n";
 export type Asset = {
   id: string;
@@ -54,6 +55,9 @@ export type Job = {
   actualMinutes?: number;
   completionNotes?: string;
   performedBy?: string;
+  freeUsage?: FreeUsage[];
+  assetName?: string;
+  performerId?: string;
   usedItems?: (Item & { usedQuantity: number })[];
 };
 export type Fault = {
@@ -120,7 +124,9 @@ export function completeJob(
   actualMinutes = store.jobs.find((j) => j.id === jobId)?.duration || 0,
   performedBy?: string,
   completionNotes = "",
+  freeUsage: FreeUsage[] = [],
 ): Store {
+  const usage = validateFreeUsage(freeUsage);
   const job = store.jobs.find((j) => j.id === jobId);
   if (
     !job ||
@@ -162,6 +168,8 @@ export function completeJob(
             actual: {},
             completedAt: undefined,
             usedItems: undefined,
+            freeUsage: undefined,
+            assetName: undefined,
             actualMinutes: undefined,
             completionNotes: undefined,
             performedBy: undefined,
@@ -183,6 +191,8 @@ export function completeJob(
               status: "completed" as const,
               actual,
               actualMinutes,
+              freeUsage: usage,
+              assetName: store.assets.find((a) => a.id === job.assetId)?.name,
               completionNotes,
               performedBy: performedBy || job.technician,
               usedItems: store.items

@@ -110,3 +110,27 @@ it("allows an active zero-stock tool, retains its history after deactivation, an
   s.items[0].inactive = true;
   expect(() => completeJob(s, "j1", { i1: 1 }, "Done")).toThrow();
 });
+
+it("persists free usage separately without affecting stock or recurring jobs", () => {
+  const before = seed();
+  const after = completeJob(before, "j1", {}, "Done", 20, "Matti", "", [
+    { type: "tools", name: "Wrench" },
+    { type: "parts", name: "Seal", quantity: 2 },
+  ]);
+  expect(after.items).toEqual(before.items);
+  expect(after.jobs[0].freeUsage).toHaveLength(2);
+  expect(after.jobs.at(-1)?.freeUsage).toBeUndefined();
+  expect(JSON.parse(JSON.stringify(after)).jobs[0].freeUsage[1].quantity).toBe(
+    2,
+  );
+});
+it.each([0, -1, NaN, Infinity])(
+  "rejects invalid free part quantity %s",
+  (quantity) => {
+    expect(() =>
+      completeJob(seed(), "j1", {}, "Done", 20, "Matti", "", [
+        { type: "parts", name: "Seal", quantity },
+      ]),
+    ).toThrow();
+  },
+);

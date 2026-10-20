@@ -18,6 +18,10 @@ it("uses guarded transactional completion rather than browser inventory upserts"
     status: "completed",
     actual: { i2: 1 },
     notes: "Confirmed",
+    freeUsage: [
+      { type: "tools", name: "Wrench" },
+      { type: "parts", name: "Seal", quantity: 2 },
+    ],
   };
   next.items[1].quantity = 0;
   const rpc = vi.fn(async (name: string) => ({
@@ -34,7 +38,12 @@ it("uses guarded transactional completion rather than browser inventory upserts"
       p_org: "org",
       p_revision: 7,
       p_kind: "complete",
-      p_data: { id: "j1", actual: { i2: 1 }, notes: "Confirmed" },
+      p_data: {
+        id: "j1",
+        actual: { i2: 1 },
+        notes: "Confirmed",
+        freeUsage: next.jobs[0].freeUsage,
+      },
     },
   ]);
 });
