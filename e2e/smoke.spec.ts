@@ -117,7 +117,7 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
     .getByRole("button", { name: "Kirjaa valmiiksi", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await navigate("Varasto ja työkalut");
+  await navigate("Varaosat ja työkalut");
   await expect(
     page
       .getByRole("row")
@@ -145,7 +145,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await navigate("Raportit");
   await page.getByRole("button", { name: /Revised maintenance/ }).click();
   await expect(
-    page.getByText("Verified demo completion", { exact: true }),
+    page
+      .getByRole("dialog")
+      .getByText("Verified demo completion", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Sulje", exact: true }).click();
   await navigate("Laitteet");
@@ -160,7 +162,9 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
     .getByRole("button", { name: /Revised maintenance/ })
     .click();
   await expect(
-    page.getByText("Verified demo completion", { exact: true }),
+    page
+      .getByRole("dialog")
+      .getByText("Verified demo completion", { exact: true }),
   ).toBeVisible();
   await expect(
     page
@@ -169,7 +173,7 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
       .last(),
   ).toBeVisible();
   await page.getByRole("button", { name: "Sulje", exact: true }).click();
-  await navigate("Varasto ja työkalut");
+  await navigate("Varaosat ja työkalut");
   await page
     .getByRole("row")
     .filter({ hasText: "SKF 6205-2RS" })
@@ -178,6 +182,10 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await page
     .getByLabel("Nimi", { exact: true })
     .fill("Renamed and archived bearing");
+  await page
+    .getByRole("dialog")
+    .getByText("Lisätiedot", { exact: true })
+    .click();
   await page.getByLabel("Poistettu käytöstä", { exact: true }).check();
   await page.getByRole("button", { name: "Tallenna", exact: true }).click();
   await page.reload();
@@ -200,4 +208,43 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await expect(
     page.getByRole("dialog").getByText(/Renamed and archived bearing/),
   ).toHaveCount(0);
+});
+
+test("optional registry fields are expandable and usable on mobile", async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto("?demo=1");
+  await page.getByRole("button", { name: "Aloitetaan" }).click();
+  if (isMobile)
+    await page.getByRole("button", { name: "Valikko", exact: true }).click();
+  await expect(
+    page.getByText("Valinnaiset rekisterit", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Varaosat ja työkalut", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Lisää nimike", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Määrä", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByLabel("Kalibrointi voimassa")).not.toBeVisible();
+  await dialog.getByLabel("Nimi", { exact: true }).fill("Calibrated tool");
+  await dialog.getByLabel("Varastopaikka").fill("Cabinet");
+  await dialog.getByText("Lisätiedot", { exact: true }).click();
+  await dialog.getByLabel("Kalibrointi voimassa").fill("2027-01-01");
+  await dialog.getByLabel("Tuotenumero", { exact: true }).fill("T-100");
+  await expect(dialog.getByLabel("Kalibrointi voimassa")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
+  await dialog.getByRole("button", { name: "Tallenna", exact: true }).click();
+  await expect(
+    page.getByRole("row").filter({ hasText: "Calibrated tool" }),
+  ).toContainText("T-100");
+  await page.reload();
+  await expect(
+    page.getByRole("row").filter({ hasText: "Calibrated tool" }),
+  ).toContainText("2027-01-01");
 });

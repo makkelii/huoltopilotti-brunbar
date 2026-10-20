@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, it, expect } from "vitest";
 import App from "../src/App";
+import type { Repository } from "../src/data/repository";
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem("hp-welcome", "1");
@@ -115,7 +116,7 @@ it("requires human approval before changing template quantities", async () => {
 it("creates a tool without quantity and hides stock columns for tools", async () => {
   const { within } = await import("@testing-library/react");
   render(<App />);
-  fireEvent.click(screen.getByRole("button", { name: "Varasto ja työkalut" }));
+  fireEvent.click(screen.getByRole("button", { name: "Varaosat ja työkalut" }));
   fireEvent.click(screen.getByRole("button", { name: "Lisää nimike" }));
   const dialog = within(screen.getByRole("dialog"));
   expect(dialog.queryByLabelText("Määrä")).not.toBeInTheDocument();
@@ -151,4 +152,65 @@ it("creates a tool without quantity and hides stock columns for tools", async ()
   expect(
     screen.queryByRole("columnheader", { name: "Varaukset" }),
   ).not.toBeInTheDocument();
+});
+
+it("starts technicians on their own work while keeping all work accessible", async () => {
+  const { seed } = await import("../src/seed");
+  const data = seed();
+  const initialSnapshot = {
+    organizationId: "org",
+    organizationName: "Workshop",
+    revision: 0,
+    role: "technician" as const,
+    members: [],
+    store: data,
+  };
+  const repository = {
+    load: async () => initialSnapshot,
+  } as unknown as Repository;
+  render(
+    <App
+      initialSnapshot={initialSnapshot}
+      repository={repository}
+      userName="Aleksi Korhonen"
+    />,
+  );
+  expect(screen.getByRole("checkbox", { name: "Omat työt" })).toBeChecked();
+  expect(
+    screen.getByRole("button", { name: new RegExp(data.jobs[0].name) }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: new RegExp(data.jobs[1].name) }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("checkbox", { name: "Omat työt" }));
+  expect(
+    screen.getByRole("button", { name: new RegExp(data.jobs[1].name) }),
+  ).toBeInTheDocument();
+});
+
+it("preserves equipment metadata when editing only basic fields", async () => {
+  const { seed } = await import("../src/seed");
+  const { within } = await import("@testing-library/react");
+  const data = seed();
+  localStorage.setItem("huoltopilotti-demo-v1", JSON.stringify(data));
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Laitteet" }));
+  const card = screen
+    .getByRole("heading", { name: data.assets[0].name })
+    .closest("section")!;
+  fireEvent.click(within(card).getByRole("button", { name: "Muokkaa" }));
+  const dialog = screen.getByRole("dialog");
+  expect(dialog.querySelector("details")?.open).toBe(false);
+  fireEvent.change(within(dialog).getByLabelText("Nimi"), {
+    target: { value: "Renamed machine" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Tallenna" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  const saved = JSON.parse(localStorage.getItem("huoltopilotti-demo-v1")!)
+    .assets[0];
+  expect(saved.manufacturer).toBe(data.assets[0].manufacturer);
+  expect(saved.serial).toBe(data.assets[0].serial);
+  expect(saved.model).toBe(data.assets[0].model);
 });

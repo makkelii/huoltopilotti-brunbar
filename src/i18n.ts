@@ -1,5 +1,60 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  scheduleDate: ["Ajankohta", "Date", "Zeitpunkt"],
+  mainNavigation: ["Päävalikko", "Main navigation", "Hauptmenü"],
+  optionalRegistries: [
+    "Valinnaiset rekisterit",
+    "Optional registries",
+    "Optionale Register",
+  ],
+  management: [
+    "Hallinta ja raportit",
+    "Management and reports",
+    "Verwaltung und Berichte",
+  ],
+  moreDetails: ["Lisätiedot", "More details", "Weitere Angaben"],
+  myJobs: ["Omat työt", "My work", "Meine Arbeiten"],
+  calibrationDate: [
+    "Kalibrointi voimassa",
+    "Calibration valid until",
+    "Kalibrierung gültig bis",
+  ],
+  compatibleEquipment: [
+    "Yhteensopivat laitteet",
+    "Compatible equipment",
+    "Kompatible Anlagen",
+  ],
+  approvedAlternatives: [
+    "Hyväksytyt vaihtoehdot",
+    "Approved alternatives",
+    "Freigegebene Alternativen",
+  ],
+  optionalRegistryHelp: [
+    "Rekisterit ovat valinnaisia. Voit kirjata työkalut ja varaosat myös suoraan huollolle.",
+    "Registries are optional. You can also record tools and parts directly on maintenance.",
+    "Register sind optional. Werkzeuge und Ersatzteile können direkt zur Wartung erfasst werden.",
+  ],
+  jobsHelp: [
+    "Valitse huoltotyö, tarkista ohjeet ja kirjaa tehdyt työt.",
+    "Choose a work order, review instructions and record the work done.",
+    "Auftrag wählen, Anweisungen prüfen und Arbeiten erfassen.",
+  ],
+  assetsHelp: [
+    "Laitteen tiedot ja valmistuneet huollot löytyvät samasta paikasta.",
+    "Asset details and completed maintenance in one place.",
+    "Anlagendaten und abgeschlossene Wartungen an einem Ort.",
+  ],
+  managementHelp: [
+    "Hallitse yrityksen tietoja ja tarkastele toteutuneita huoltoja.",
+    "Manage company information and review completed maintenance.",
+    "Unternehmensdaten verwalten und abgeschlossene Wartungen ansehen.",
+  ],
+  formHelp: [
+    "Täytä perustiedot. Muut kentät löytyvät lisätiedoista.",
+    "Enter the basics. Other fields are under more details.",
+    "Grunddaten eingeben. Weitere Felder unter Weitere Angaben.",
+  ],
+
   workDone: ["Tehdyt työt", "Work done", "Ausgeführte Arbeiten"],
   completedOn: ["Suoritettu", "Completed", "Abgeschlossen"],
   notRecorded: ["Ei kirjattu", "Not recorded", "Nicht erfasst"],
@@ -333,10 +388,10 @@ const words = {
     "Tatsächliche Mengen als neue Vorlagenversion freigeben? Anweisungen und Sicherheit vor Einsatz prüfen.",
   ],
   menu: ["Valikko", "Menu", "Menü"],
-  dashboard: ["Yleiskuva", "Overview", "Übersicht"],
+  dashboard: ["Etusivu", "Overview", "Übersicht"],
   assets: ["Laitteet", "Equipment", "Anlagen"],
   jobs: ["Huoltotyöt", "Maintenance", "Wartungsarbeiten"],
-  inventory: ["Varasto ja työkalut", "Inventory & tools", "Lager & Werkzeuge"],
+  inventory: ["Varaosat ja työkalut", "Inventory & tools", "Lager & Werkzeuge"],
   radar: ["Huoltotutka", "Fault radar", "Störungsradar"],
   reports: ["Raportit", "Reports", "Berichte"],
   settings: ["Asetukset", "Settings", "Einstellungen"],

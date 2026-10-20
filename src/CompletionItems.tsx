@@ -118,7 +118,7 @@ export function CompletionItems({
               <div className="usage-row" key={item.id}>
                 <div className="usage-description">
                   <strong>{item.name}</strong>
-                  <small>{item.partNumber || item.id}</small>
+                  <small>{item.partNumber || item.externalId}</small>
                 </div>
                 {kind === "supplies" ? (
                   <div className="usage-amount">
@@ -205,6 +205,12 @@ export function CompletionItems({
           <Dialog.Overlay className="dialog-overlay usage-overlay" />
           <Dialog.Content
             className="dialog usage-dialog"
+            onEscapeKeyDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              activeSearch.current++;
+              setGroup(null);
+            }}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               opener.current?.focus();
@@ -292,7 +298,7 @@ export function CompletionItems({
                           {t("partNumber")}: {item.partNumber || "—"} ·{" "}
                           {t(item.type)}
                         </small>
-                        <small>{item.externalId || item.id}</small>
+                        <small>{item.externalId}</small>
                         {exists && <small>{t("alreadySelected")}</small>}
                         {item.type !== "tools" && available <= 0 && (
                           <small>{t("inventoryUnavailable")}</small>
