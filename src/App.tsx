@@ -158,6 +158,7 @@ export default function App({
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
     [inventoryType, setInventoryType] = useState("all"),
+    [itemType, setItemType] = useState<Item["type"]>("tools"),
     [dark, setDark] = useState(localStorage.getItem("hp-theme") === "dark"),
     [mobile, setMobile] = useState(false),
     [toast, setToast] = useState(""),
@@ -287,6 +288,7 @@ export default function App({
       return;
     }
     setEditing(entry);
+    if (kind === "item") setItemType((entry as Item | null)?.type || "tools");
     setModal(kind);
     setError("");
   };
@@ -294,7 +296,9 @@ export default function App({
     today = new Date().toLocaleDateString("sv-SE");
   const overdue = active.filter((j) => j.due < today);
   const chosen = store.jobs.find((j) => j.id === selected);
-  const low = store.items.filter((i) => i.quantity - i.reserved < 2);
+  const low = store.items.filter(
+    (i) => i.type !== "tools" && !i.inactive && i.quantity - i.reserved < 2,
+  );
   const filteredJobs = store.jobs.filter(
     (j) =>
       (filter === "all" ||
@@ -364,7 +368,10 @@ export default function App({
         id: entryId,
         name: s("name"),
         type: s("type") as Item["type"],
-        quantity: Number(s("quantity")),
+        quantity:
+          s("type") === "tools"
+            ? ((editing as Item | null)?.quantity ?? 0)
+            : Number(s("quantity")),
         reserved: (editing as Item | null)?.reserved || 0,
         location: s("location"),
         spec: s("spec"),
@@ -1114,9 +1121,15 @@ export default function App({
                       "storage",
                       "description",
                       "edit",
-                    ].map((k) => (
-                      <th key={k}>{t(k as Key)}</th>
-                    ))}
+                    ]
+                      .filter(
+                        (k) =>
+                          inventoryType !== "tools" ||
+                          !["quantity", "reservation"].includes(k),
+                      )
+                      .map((k) => (
+                        <th key={k}>{t(k as Key)}</th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -1140,16 +1153,24 @@ export default function App({
                           </small>
                         </td>
                         <td>{t(i.type)}</td>
-                        <td>
-                          <span
-                            className={
-                              i.quantity - i.reserved < 2 ? "danger-text" : ""
-                            }
-                          >
-                            {i.quantity}
-                          </span>
-                        </td>
-                        <td>{i.reserved}</td>
+                        {inventoryType !== "tools" && (
+                          <>
+                            <td>
+                              {i.type !== "tools" && (
+                                <span
+                                  className={
+                                    i.quantity - i.reserved < 2
+                                      ? "danger-text"
+                                      : ""
+                                  }
+                                >
+                                  {i.quantity}
+                                </span>
+                              )}
+                            </td>
+                            <td>{i.type !== "tools" && i.reserved}</td>
+                          </>
+                        )}
                         <td>{i.location}</td>
                         <td>
                           {i.spec}
@@ -1285,7 +1306,11 @@ export default function App({
                     <small>{t(r.category)}</small>
                     <p>{local(r.label, lang)}</p>
                     <small>
-                      {t("quantity")}: {r.quantity}
+                      {r.category !== "tools" && (
+                        <>
+                          {t("quantity")}: {r.quantity}
+                        </>
+                      )}
                     </small>
                   </div>
                 </div>
@@ -1770,7 +1795,10 @@ export default function App({
                         {t("type")}
                         <select
                           name="type"
-                          defaultValue={(editing as Item)?.type}
+                          value={itemType}
+                          onChange={(e) =>
+                            setItemType(e.target.value as Item["type"])
+                          }
                         >
                           {(["tools", "parts", "consumables"] as const).map(
                             (k) => (
@@ -1781,17 +1809,19 @@ export default function App({
                           )}
                         </select>
                       </label>
-                      <label>
-                        {t("quantity")}
-                        <input
-                          type="number"
-                          name="quantity"
-                          min="0"
-                          step="any"
-                          required
-                          defaultValue={(editing as Item)?.quantity || 0}
-                        />
-                      </label>
+                      {itemType !== "tools" && (
+                        <label>
+                          {t("quantity")}
+                          <input
+                            type="number"
+                            name="quantity"
+                            min="0"
+                            step="any"
+                            required
+                            defaultValue={(editing as Item)?.quantity || 0}
+                          />
+                        </label>
+                      )}
                       <label>
                         {t("storage")}
                         <input
@@ -1920,11 +1950,20 @@ export default function App({
                         <small>{t(r.category)}</small>
                         <p>{local(r.label, lang)}</p>
                         <small>
-                          {t("quantity")}: {r.quantity}
+                          {r.category !== "tools" && (
+                            <>
+                              {t("quantity")}: {r.quantity}
+                            </>
+                          )}
                         </small>
                         {item && (
                           <small>
-                            {item.location} · {t("quantity")}: {item.quantity} ·{" "}
+                            {item.location} ·{" "}
+                            {item.type !== "tools" && (
+                              <>
+                                {t("quantity")}: {item.quantity} ·{" "}
+                              </>
+                            )}
                             {item.spec}
                             {item.calibration ? " · " + item.calibration : ""}
                           </small>
@@ -2078,6 +2117,7 @@ export default function App({
                         name: key,
                         partNumber: "",
                         unit: "",
+                        type: undefined,
                         ...(chosen.legacyReconstructed
                           ? { name: key }
                           : store.items.find((i) => i.id === key)),
@@ -2086,8 +2126,10 @@ export default function App({
                       }))
                     ).map((item) => (
                       <p key={item.id}>
-                        {item.name} · {item.partNumber}: {item.usedQuantity}{" "}
-                        {item.unit}
+                        {item.name} · {item.partNumber}:{" "}
+                        {item.type === "tools"
+                          ? t("toolUsed")
+                          : `${item.usedQuantity} ${item.unit || ""}`}
                       </p>
                     ))}
                   </div>

@@ -15,6 +15,7 @@ export function TemplateEditor({
   onSave: (requirements: Requirement[]) => Promise<boolean>;
 }) {
   const t = (k: Parameters<typeof translate>[1]) => translate(lang, k);
+  const [category, setCategory] = useState<Requirement["category"]>("tools");
   const [draft, setDraft] = useState(current),
     [message, setMessage] = useState("");
   function add(e: FormEvent<HTMLFormElement>) {
@@ -37,13 +38,14 @@ export function TemplateEditor({
         id: id(),
         category,
         label: [text, text, text],
-        quantity: Number(f.get("quantity")),
+        quantity: category === "tools" ? 1 : Number(f.get("quantity")),
         state: "unchecked",
         ...(itemId ? { itemId } : {}),
       },
     ]);
     setMessage("");
     e.currentTarget.reset();
+    setCategory("tools");
   }
   return (
     <div className="completion">
@@ -51,7 +53,13 @@ export function TemplateEditor({
       <form onSubmit={add}>
         <label>
           {t("type")}
-          <select name="category">
+          <select
+            name="category"
+            value={category}
+            onChange={(e) =>
+              setCategory(e.target.value as Requirement["category"])
+            }
+          >
             {(
               [
                 "tools",
@@ -83,18 +91,20 @@ export function TemplateEditor({
             ))}
           </select>
         </label>
-        <label>
-          {t("quantity")}
-          <input
-            name="quantity"
-            type="number"
-            min="0.01"
-            max="100000"
-            step="0.01"
-            defaultValue="1"
-            required
-          />
-        </label>
+        {category !== "tools" && (
+          <label>
+            {t("quantity")}
+            <input
+              name="quantity"
+              type="number"
+              min="0.01"
+              max="100000"
+              step="0.01"
+              defaultValue="1"
+              required
+            />
+          </label>
+        )}
         <Button variant="outline" type="submit">
           {t("addItem")}
         </Button>
@@ -102,7 +112,8 @@ export function TemplateEditor({
       {draft.map((r) => (
         <div className="template-row" key={r.id}>
           <span>
-            {r.label[{ fi: 0, en: 1, de: 2 }[lang]]} · {r.quantity}
+            {r.label[{ fi: 0, en: 1, de: 2 }[lang]]}
+            {r.category !== "tools" && ` · ${r.quantity}`}
           </span>
           <Button
             variant="ghost"

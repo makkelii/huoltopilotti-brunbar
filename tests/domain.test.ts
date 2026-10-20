@@ -97,3 +97,16 @@ describe("durable completion details", () => {
     expect(twice.events).toHaveLength(2);
   });
 });
+
+it("allows an active zero-stock tool, retains its history after deactivation, and rejects inactive use", () => {
+  const s = seed();
+  s.items[0].quantity = 0;
+  s.items[0].reserved = 5;
+  const done = completeJob(s, "j1", { i1: 1, i2: 1 }, "Done");
+  expect(done.items[0].quantity).toBe(0);
+  expect(done.items[1].quantity).toBe(0);
+  done.items[0].inactive = true;
+  expect(done.jobs[0].usedItems?.[0].name).toBe(s.items[0].name);
+  s.items[0].inactive = true;
+  expect(() => completeJob(s, "j1", { i1: 1 }, "Done")).toThrow();
+});

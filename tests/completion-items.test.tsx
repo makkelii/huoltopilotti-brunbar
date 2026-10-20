@@ -81,7 +81,14 @@ it("searches, selects, edits and removes only explicit part usage, with duplicat
 });
 
 it("records tool use explicitly without a consumption quantity field", async () => {
-  render(<Harness />);
+  render(
+    <Harness
+      find={async () => ({
+        items: [{ ...data.items[0], quantity: 0, reserved: 5 }],
+        hasMore: false,
+      })}
+    />,
+  );
   fireEvent.click(
     screen.getByRole("button", { name: "Lisää · Käytetyt työkalut" }),
   );

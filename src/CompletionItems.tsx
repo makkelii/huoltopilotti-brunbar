@@ -185,7 +185,8 @@ export function CompletionItems({
               )
               .map((r) => (
                 <li key={r.id}>
-                  {local(r.label, lang)} · {r.quantity}
+                  {local(r.label, lang)}
+                  {r.category !== "tools" && ` · ${r.quantity}`}
                 </li>
               ))}
           </ul>
@@ -269,7 +270,11 @@ export function CompletionItems({
                     <button
                       type="button"
                       className="usage-result"
-                      disabled={exists || available <= 0}
+                      disabled={
+                        exists ||
+                        item.inactive ||
+                        (item.type !== "tools" && available <= 0)
+                      }
                       onClick={() => {
                         setSelected((items) => [...items, item]);
                         onChange({
@@ -289,7 +294,7 @@ export function CompletionItems({
                         </small>
                         <small>{item.externalId || item.id}</small>
                         {exists && <small>{t("alreadySelected")}</small>}
-                        {available <= 0 && (
+                        {item.type !== "tools" && available <= 0 && (
                           <small>{t("inventoryUnavailable")}</small>
                         )}
                       </span>
