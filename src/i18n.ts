@@ -86,9 +86,9 @@ const words = {
     "Diese Wartung wiederholen",
   ],
   repeatHint: [
-    "Muokkaa uuden työn suunnitelmaa. Vanha huolto säilyy muuttumattomana; toteumaa ei kopioida.",
-    "Edit the new plan. Original history is unchanged; actual usage is not copied.",
-    "Bearbeiten Sie den neuen Plan. Die Historie bleibt unverändert; Verbrauch wird nicht kopiert.",
+    "Edellisen huollon toteutuneet nimikkeet ja määrät esitäytetään suunnitelmaksi. Jos toteumaa ei ole, käytetään vanhoja suunniteltuja tarpeita. Voit muokata tai poistaa tarpeita. Uudelle työlle ei kirjata toteumaa eikä saldoja muuteta.",
+    "Previous actual items and quantities prefill the new plan, falling back to planned requirements when no usage exists. Edit or remove requirements before saving. No actual usage or stock consumption is recorded.",
+    "Tatsächlich verwendete Artikel und Mengen werden als neuer Plan vorbelegt; ohne Verbrauch wird der alte Plan verwendet. Bedarfe können bearbeitet oder entfernt werden. Kein Verbrauch wird gebucht.",
   ],
   repeatAssetUnavailable: [
     "Alkuperäinen laite ei ole aktiivinen. Valitse toinen aktiivinen laite tai peruuta.",
@@ -96,14 +96,9 @@ const words = {
     "Die ursprüngliche Anlage ist nicht aktiv. Wählen Sie eine aktive Anlage oder brechen Sie ab.",
   ],
   repeatItemsUnavailable: [
-    "Rekisteriviite ei ole käytettävissä. Nämä tarpeet kopioitiin vapaina; tarkista tai korvaa ne",
-    "Registry reference unavailable. These requirements were copied as manual entries; review or replace them",
-    "Registerverweis nicht verfügbar. Diese Bedarfe wurden frei kopiert; prüfen oder ersetzen Sie sie",
-  ],
-  repeatSuggestions: [
-    "Ehdotukset vanhasta toteumasta",
-    "Suggestions from previous usage",
-    "Vorschläge aus früherem Verbrauch",
+    "Tarkista tai korvaa vapaana kopioidut tai puutteelliset nimikkeet",
+    "Review or replace manual copies and incomplete items",
+    "Freie Kopien und unvollständige Artikel prüfen oder ersetzen",
   ],
 
   archived: ["Arkistoitu", "Archived", "Archiviert"],

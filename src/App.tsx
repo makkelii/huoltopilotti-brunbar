@@ -1665,27 +1665,6 @@ export default function App({
                           {repeatDraft.warnings.join(", ")}
                         </p>
                       )}
-                      {repeatDraft.suggestions.length > 0 && (
-                        <details>
-                          <summary>{t("repeatSuggestions")}</summary>
-                          <p>{t("plannedNotUsed")}</p>
-                          {repeatDraft.suggestions.map((r) => (
-                            <Button
-                              key={r.id}
-                              type="button"
-                              variant="outline"
-                              disabled={jobRequirements.some(
-                                (x) => x.id === r.id,
-                              )}
-                              onClick={() =>
-                                setJobRequirements([...jobRequirements, r])
-                              }
-                            >
-                              {t("addItem")} · {local(r.label, lang)}
-                            </Button>
-                          ))}
-                        </details>
-                      )}
                     </section>
                   )}
 

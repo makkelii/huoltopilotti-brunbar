@@ -1,5 +1,5 @@
 import { id, type Job, type Requirement, type Store } from "./domain";
-import { local, type Lang } from "./i18n";
+import { local, translate, type Lang } from "./i18n";
 export type RepeatPlan = {
   name: string;
   description: string;
@@ -9,7 +9,6 @@ export type RepeatPlan = {
   requirements: Requirement[];
   assetId: string;
   warnings: string[];
-  suggestions: Requirement[];
 };
 export function repeatPlan(source: Job, store: Store, lang: Lang): RepeatPlan {
   if (source.status !== "completed") throw Error("completed source required");
@@ -30,40 +29,69 @@ export function repeatPlan(source: Job, store: Store, lang: Lang): RepeatPlan {
       ...(item ? { itemId: item.id } : {}),
     };
   };
-  const requirements = (source.requirements || []).map(copy);
-  const suggestions: Requirement[] = [];
-  if (
-    !requirements.some((r) =>
-      ["parts", "consumables", "tools"].includes(r.category),
-    )
-  ) {
-    for (const [itemId, amount] of Object.entries(source.actual || {})) {
-      if (amount <= 0) continue;
-      const frozen = source.usedItems?.find((i) => i.id === itemId);
-      const current = store.items.find((i) => i.id === itemId);
-      const name = frozen?.name || current?.name;
-      if (!name) continue;
-      const category = frozen?.type || current?.type || "parts";
-      suggestions.push(
-        copy({
-          id: id(),
-          category,
-          label: [name, name, name],
-          itemId,
-          quantity: category === "tools" ? 1 : amount,
-          state: "unchecked",
-        }),
-      );
+  const planned = source.requirements || [];
+  const actual: Requirement[] = [];
+  const positive = (n: number | undefined): n is number =>
+    typeof n === "number" && Number.isFinite(n) && n > 0;
+  let hasActual = false;
+  // Frozen usage is authoritative; older snapshots may only contain the actual map.
+  const itemIds = new Set([
+    ...(source.usedItems || []).map((i) => i.id),
+    ...Object.keys(source.actual || {}),
+  ]);
+  for (const itemId of itemIds) {
+    const frozen = source.usedItems?.find((i) => i.id === itemId);
+    const amount = frozen ? frozen.usedQuantity : source.actual?.[itemId];
+    if (!positive(amount)) continue;
+    hasActual = true;
+    const current = store.items.find((i) => i.id === itemId);
+    const prior = planned.find((r) => r.itemId === itemId);
+    const name =
+      frozen?.name || current?.name || (prior && local(prior.label, lang));
+    if (!name) {
+      // Do not invent a name or expose an orphaned technical identifier.
+      warnings.push(translate(lang, "unknownHistoryItem"));
+      continue;
     }
-    for (const row of source.freeUsage || [])
-      suggestions.push({
-        id: id(),
+    const category = frozen?.type || current?.type || prior?.category;
+    if (!category || !["parts", "consumables", "tools"].includes(category))
+      continue;
+    actual.push(
+      copy({
+        id: "",
+        category,
+        label: [name, name, name],
+        itemId,
+        quantity: amount,
+        state: "unchecked",
+      }),
+    );
+  }
+  for (const row of source.freeUsage || []) {
+    const amount = row.type === "tools" ? 1 : row.quantity;
+    if (!positive(amount) || !row.name.trim()) continue;
+    hasActual = true;
+    actual.push(
+      copy({
+        id: "",
         category: row.type,
         label: [row.name, row.name, row.name],
-        quantity: row.type === "tools" ? 1 : row.quantity,
+        quantity: amount,
         state: "unchecked",
-      });
+      }),
+    );
   }
+  // Actual supplies replace the entire old supply plan, never its safety/work instructions.
+  const requirements = hasActual
+    ? [
+        ...planned
+          .filter(
+            (r) => !["parts", "consumables", "tools"].includes(r.category),
+          )
+          .map(copy),
+        ...actual,
+      ]
+    : planned.map(copy);
   return {
     name: source.name,
     description: source.description || "",
@@ -75,6 +103,5 @@ export function repeatPlan(source: Job, store: Store, lang: Lang): RepeatPlan {
       "",
     requirements,
     warnings,
-    suggestions,
   };
 }
