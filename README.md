@@ -61,3 +61,5 @@ No live hosting, custom domain, DNS, Auth settings or database has been changed.
 Password recovery setup and Finnish troubleshooting: [docs/PASSWORD_RECOVERY.md](docs/PASSWORD_RECOVERY.md). Hosted Supabase URL/SMTP/template configuration must be verified independently; frontend commits do not change it.
 
 Huoltohistoria ja usean yrityksen turvallinen käyttöönotto: [ohje](docs/HISTORY_TENANCY_SETUP.md).
+
+Valmistumislomakkeen haettavat työkalut ja varaosat: [käyttö ja käyttöönotto](docs/COMPLETION_ITEM_SELECTION.md).

@@ -1,7 +1,15 @@
 import { Repository, type Snapshot, RepositoryError } from "./data/repository";
 import { supabase } from "./data/supabase";
+import { CompletionItems } from "./CompletionItems";
+import { searchDemoInventory } from "./data/inventorySearch";
 import { TemplateEditor } from "./TemplateEditor";
-import { useEffect, useState, useRef, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  type FormEvent,
+} from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   LayoutDashboard,
@@ -114,6 +122,18 @@ export default function App({
     }
     return seed();
   });
+  const searchCompletionInventory = useCallback(
+    (
+      group: "supplies" | "tools",
+      query: string,
+      page: number,
+      signal: AbortSignal,
+    ) =>
+      repository
+        ? repository.searchInventory(group, query, page, signal)
+        : Promise.resolve(searchDemoInventory(store.items, group, query, page)),
+    [repository, store.items],
+  );
   const [lang, setLang] = useState<Lang>(() => {
     const v = localStorage.getItem("hp-lang");
     return v === "en" || v === "de" ? v : "fi";
@@ -394,15 +414,31 @@ export default function App({
     try {
       if (
         !(await change(
-          completeJob(
-            store,
-            chosen.id,
-            actual,
-            notes,
-            actualMinutes,
-            userName,
-            completionNotes,
-          ),
+          repository
+            ? {
+                ...store,
+                jobs: store.jobs.map((job) =>
+                  job.id === chosen.id
+                    ? {
+                        ...job,
+                        status: "completed" as const,
+                        actual,
+                        notes,
+                        actualMinutes,
+                        completionNotes,
+                      }
+                    : job,
+                ),
+              }
+            : completeJob(
+                store,
+                chosen.id,
+                actual,
+                notes,
+                actualMinutes,
+                userName,
+                completionNotes,
+              ),
         ))
       )
         return;
@@ -1931,7 +1967,7 @@ export default function App({
                     </div>
                   );
                 })}
-                {chosen.status !== "completed" && (
+                {chosen.status !== "completed" && !completion && (
                   <div className="button-row">
                     <Button
                       variant="outline"
@@ -1982,29 +2018,13 @@ export default function App({
                         }
                       />
                     </label>
-                    {store.items
-                      .filter((i) => !i.inactive)
-                      .map((i) => (
-                        <label key={i.id}>
-                          {i.name}{" "}
-                          <small>
-                            ({t("quantity")}: {i.quantity})
-                          </small>
-                          <input
-                            type="number"
-                            min="0"
-                            max={i.quantity}
-                            step="any"
-                            value={actual[i.id] || 0}
-                            onChange={(e) =>
-                              setActual({
-                                ...actual,
-                                [i.id]: Number(e.target.value),
-                              })
-                            }
-                          />
-                        </label>
-                      ))}
+                    <CompletionItems
+                      lang={lang}
+                      actual={actual}
+                      onChange={setActual}
+                      search={searchCompletionInventory}
+                      requirements={chosen.requirements}
+                    />
                     <label>
                       {t("notes")}
                       <textarea

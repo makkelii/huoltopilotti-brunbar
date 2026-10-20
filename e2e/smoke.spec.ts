@@ -76,10 +76,39 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await dialog.getByRole("combobox").first().selectOption("review");
   await expect(dialog.getByRole("combobox").first()).toHaveValue("review");
   await dialog.getByRole("button", { name: "Kirjaa valmistuminen" }).click();
+  await expect(dialog.getByRole("spinbutton")).toHaveCount(1);
   await dialog
-    .getByLabel(/SKF 6205-2RS/)
-    .last()
-    .fill("1");
+    .getByRole("button", { name: "Lisää · Käytetyt varaosat ja tarvikkeet" })
+    .click();
+  await page.getByRole("searchbox").fill("SKF");
+  await page.getByRole("button", { name: /SKF 6205-2RS.*Tuotenumero/ }).click();
+  await dialog.getByLabel("Käytetty määrä · SKF 6205-2RS").fill("0.5");
+  await dialog
+    .getByRole("button", { name: "Poista valinta · SKF 6205-2RS" })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Lisää · Käytetyt varaosat ja tarvikkeet" })
+    .click();
+  await page.getByRole("searchbox").fill("SKF");
+  await page.getByRole("button", { name: /SKF 6205-2RS.*Tuotenumero/ }).click();
+  await dialog.getByLabel("Käytetty määrä · SKF 6205-2RS").fill("1");
+  await dialog
+    .getByRole("button", { name: "Lisää · Käytetyt työkalut" })
+    .click();
+  await page.getByRole("searchbox").fill("Momenttiavain");
+  await page.getByRole("searchbox").press("Tab");
+  const toolResult = page.getByRole("button", {
+    name: /Momenttiavain.*Tuotenumero/,
+  });
+  await expect(toolResult).toBeVisible();
+  await toolResult.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog.getByText("Käytetty", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
   await dialog
     .getByLabel("Muistiinpanot / vahvistettu korjaus")
     .fill("Verified demo completion");
@@ -93,6 +122,13 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
       .getByRole("cell")
       .nth(2),
   ).toHaveText("0");
+  await expect(
+    page
+      .getByRole("row")
+      .filter({ hasText: "Momenttiavain" })
+      .getByRole("cell")
+      .nth(2),
+  ).toHaveText("2");
   await navigate("Raportit");
   await page.getByRole("button", { name: /Revised maintenance/ }).click();
   await expect(
