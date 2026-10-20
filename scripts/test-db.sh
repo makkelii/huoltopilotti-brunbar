@@ -20,10 +20,14 @@ docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/mi
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/upgrade_history_setup.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200006_free_completion_usage.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/upgrade_history_assert.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/production_lines_upgrade_setup.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200007_production_lines.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/production_lines_upgrade_assert.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/private.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/history.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/tool_stock_guard.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/free_usage.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/production_lines.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-setup.sql
 mkdir -p work/db-tests
 (docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-owner.sql > work/db-tests/owner.log 2>&1) &
@@ -41,3 +45,19 @@ grep -q 'stale revision' work/db-tests/*.log
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-assert.sql
 echo "PostgreSQL tenant, invitation, shared-data and concurrent inventory tests passed"
 
+# A manager assigning equipment races a line archive; the revision lock must select one winner.
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/line-concurrency-setup.sql
+(docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/line-concurrency-archive.sql > work/db-tests/line-archive.log 2>&1) &
+archive_process=$!
+(docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/line-concurrency-assign.sql > work/db-tests/line-assign.log 2>&1) &
+assign_process=$!
+archive_result=0; assign_result=0
+wait "$archive_process" || archive_result=$?
+wait "$assign_process" || assign_result=$?
+if { [ "$archive_result" -eq 0 ] && [ "$assign_result" -eq 0 ]; } || { [ "$archive_result" -ne 0 ] && [ "$assign_result" -ne 0 ]; }; then
+  cat work/db-tests/line-archive.log work/db-tests/line-assign.log
+  echo "Expected exactly one line archive/assignment to succeed"; exit 1
+fi
+grep -q 'stale revision' work/db-tests/line-*.log
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/line-concurrency-assert.sql
+echo "PostgreSQL production-line isolation, upgrade and concurrent assignment tests passed"

@@ -104,6 +104,27 @@ export class Repository {
     } else if (next.templateVersion !== before.templateVersion) {
       kind = "template";
       payload = { requirements: next.templateRequirements };
+    } else if (
+      JSON.stringify(before.productionLines || []) !==
+      JSON.stringify(next.productionLines || [])
+    ) {
+      const removed = (before.productionLines || []).filter(
+        (line) => !(next.productionLines || []).some((n) => n.id === line.id),
+      );
+      const changed = (next.productionLines || []).filter(
+        (line) =>
+          JSON.stringify(line) !==
+          JSON.stringify(
+            (before.productionLines || []).find((old) => old.id === line.id),
+          ),
+      );
+      if (removed.length === 1 && changed.length === 0) {
+        kind = "production_line_archive";
+        payload = { id: removed[0].id };
+      } else if (removed.length === 0 && changed.length === 1) {
+        kind = "production_line";
+        payload = changed[0];
+      } else throw new RepositoryError("invalid");
     } else {
       for (const [key, name] of [
         ["assets", "asset"],

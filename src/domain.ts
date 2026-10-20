@@ -1,7 +1,15 @@
 import type { Local } from "./i18n";
+export type ProductionLine = {
+  id: string;
+  name: string;
+  identifier: string;
+  location: string;
+  description: string;
+};
 export type Asset = {
   id: string;
   name: string;
+  productionLineId?: string | null;
   manufacturer: string;
   model: string;
   serial: string;
@@ -99,6 +107,7 @@ export type Fault = {
 export type Store = {
   version: 1;
   assets: Asset[];
+  productionLines?: ProductionLine[];
   jobs: Job[];
   items: Item[];
   faults: Fault[];

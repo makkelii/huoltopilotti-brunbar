@@ -1,0 +1,339 @@
+.assets-workspace {
+  display: grid;
+  gap: 20px;
+}
+.hierarchy-toolbar,
+.hierarchy-filters,
+.equipment-actions,
+.equipment-context,
+.line-management {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.hierarchy-toolbar {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.hierarchy-filters .button {
+  font-size: 13px;
+}
+.equipment-grid,
+.production-line-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.asset-card.equipment-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  overflow: visible;
+  min-width: 0;
+  gap: 16px;
+}
+.equipment-card-title {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.equipment-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  color: var(--green);
+  background: var(--soft);
+}
+.equipment-card-title > div {
+  flex: 1;
+  min-width: 0;
+}
+.equipment-card-title h2 {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.equipment-card-title small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.equipment-card-title .badge {
+  flex-shrink: 0;
+}
+.equipment-context {
+  color: var(--muted);
+  font-size: 13px;
+  gap: 8px 20px;
+}
+.equipment-context > span,
+.equipment-context .text-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+.equipment-context .text-button {
+  min-height: 44px;
+  font-size: 13px;
+  text-align: left;
+}
+.equipment-work-count {
+  font-size: 13px !important;
+  color: var(--muted);
+}
+.equipment-technical {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: auto;
+}
+.equipment-technical summary {
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 36px;
+  padding: 6px 0;
+}
+.equipment-technical summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.equipment-technical dl {
+  margin: 10px 0;
+  font-size: 13px;
+}
+.equipment-technical dl div {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
+  padding: 4px 0;
+}
+.equipment-technical dt {
+  color: var(--muted);
+}
+.equipment-technical dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.equipment-actions {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.production-line-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px;
+  text-align: left;
+  color: var(--text);
+  min-height: 144px;
+}
+.production-line-card > svg {
+  flex-shrink: 0;
+  color: var(--green);
+}
+.production-line-card > svg:last-child {
+  margin: auto 0 auto auto;
+}
+.production-line-card > span {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.production-line-card strong {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.production-line-card small,
+.production-line-card span span {
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.production-line-card:hover {
+  border-color: var(--green);
+  background: var(--soft);
+}
+.production-line-overview {
+  padding: 24px;
+}
+.line-overview-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.line-overview-heading > div {
+  flex: 1;
+  min-width: 140px;
+  overflow-wrap: anywhere;
+}
+.line-overview-heading h2 {
+  font-size: 22px;
+}
+.line-overview-heading small {
+  color: var(--muted);
+}
+.line-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.line-description {
+  margin-top: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.line-summary {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  padding: 20px 0;
+  margin: 20px 0 0;
+  border-top: 1px solid var(--border);
+}
+.line-summary dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.line-summary dd {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+.line-management {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.hierarchy-back {
+  justify-self: start;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+}
+.hierarchy-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--muted);
+}
+.hierarchy-empty h2 {
+  font-size: 18px;
+}
+.hierarchy-empty p {
+  max-width: 540px;
+}
+.archive-line-confirm {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 18px;
+  margin-top: 18px;
+}
+.archive-line-confirm p {
+  color: var(--danger);
+  margin-bottom: 14px;
+}
+.line-history-hint {
+  color: var(--muted);
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.line-job {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  width: 100%;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  min-height: 90px;
+}
+.line-job:hover {
+  background: var(--soft);
+}
+.line-job > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.line-job strong {
+  display: block;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.line-job span span,
+.line-job small {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.line-job > svg {
+  flex-shrink: 0;
+}
+@media (max-width: 1000px) {
+  .equipment-grid,
+  .production-line-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .hierarchy-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hierarchy-filters {
+    gap: 8px;
+  }
+  .hierarchy-filters .button {
+    flex: 1 1 auto;
+    font-size: 13px;
+  }
+  .asset-card.equipment-card {
+    padding: 18px;
+  }
+  .equipment-card-title {
+    flex-wrap: wrap;
+  }
+  .equipment-card-title .badge {
+    margin-left: 54px;
+  }
+  .production-line-overview {
+    padding: 20px;
+  }
+  .line-summary {
+    gap: 18px 28px;
+  }
+  .line-summary dt {
+    max-width: 110px;
+  }
+  .line-management .button {
+    width: 100%;
+  }
+  .line-job {
+    padding: 16px;
+    gap: 10px;
+  }
+  .line-job > svg {
+    display: none;
+  }
+  .line-job > .badge {
+    max-width: 110px;
+  }
+}

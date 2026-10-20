@@ -1,5 +1,139 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  completedMaintenance: [
+    "Valmistuneet huollot",
+    "Completed maintenance",
+    "Abgeschlossene Wartungen",
+  ],
+  productionLines: ["Tuotantolinjat", "Production lines", "Produktionslinien"],
+  productionLineOptional: [
+    "Tuotantolinja (valinnainen)",
+    "Production line (optional)",
+    "Produktionslinie (optional)",
+  ],
+  noProductionLine: [
+    "Ei tuotantolinjaa",
+    "No production line",
+    "Keine Produktionslinie",
+  ],
+  withoutProductionLine: [
+    "Ilman tuotantolinjaa",
+    "Without a production line",
+    "Ohne Produktionslinie",
+  ],
+  newProductionLine: [
+    "Lisää tuotantolinja",
+    "Add production line",
+    "Produktionslinie hinzufügen",
+  ],
+  editProductionLine: [
+    "Muokkaa tuotantolinjaa",
+    "Edit production line",
+    "Produktionslinie bearbeiten",
+  ],
+  lineIdentifier: [
+    "Tuotantolinjan tunniste (valinnainen)",
+    "Line identifier (optional)",
+    "Linienkennung (optional)",
+  ],
+  archiveProductionLine: [
+    "Poista linja käytöstä",
+    "Retire production line",
+    "Produktionslinie stilllegen",
+  ],
+  confirmArchiveLine: [
+    "Poista käytöstä ja säilytä laitteet",
+    "Retire and keep equipment",
+    "Stilllegen und Anlagen behalten",
+  ],
+  archiveLineExplanation: [
+    "Linja arkistoidaan. Laitteet siirtyvät ilman tuotantolinjaa oleviin laitteisiin. Huoltotyöt ja historia säilyvät.",
+    "The line is archived. Its equipment becomes unassigned. Maintenance jobs and history are preserved.",
+    "Die Linie wird archiviert. Die Anlagen werden ohne Linie weitergeführt. Aufträge und Verlauf bleiben erhalten.",
+  ],
+  equipmentViews: ["Laitenäkymät", "Equipment views", "Anlagenansichten"],
+  productionLineViews: [
+    "Tuotantolinjan näkymät",
+    "Production line views",
+    "Linienansichten",
+  ],
+  allEquipment: ["Kaikki laitteet", "All equipment", "Alle Anlagen"],
+  openMaintenance: [
+    "Avoimet huoltotyöt",
+    "Open maintenance",
+    "Offene Wartungen",
+  ],
+  technicalDetails: [
+    "Tekniset tiedot",
+    "Technical details",
+    "Technische Daten",
+  ],
+  addAssetToLine: [
+    "Lisää laite tälle linjalle",
+    "Add equipment to this line",
+    "Anlage dieser Linie hinzufügen",
+  ],
+  noAssetsInView: [
+    "Ei laitteita tässä näkymässä",
+    "No equipment in this view",
+    "Keine Anlagen in dieser Ansicht",
+  ],
+  firstAssetHint: [
+    "Lisää ensimmäinen laite. Tuotantolinjan ja varastorekisterin voi määritellä myöhemmin.",
+    "Add your first piece of equipment. Production lines and inventory can be set up later.",
+    "Erste Anlage hinzufügen. Produktionslinien und Lager können später eingerichtet werden.",
+  ],
+  adjustAssetSearch: [
+    "Muuta hakua tai valitse toinen näkymä.",
+    "Change your search or choose another view.",
+    "Suche ändern oder andere Ansicht wählen.",
+  ],
+  noProductionLines: [
+    "Ei tuotantolinjoja",
+    "No production lines",
+    "Keine Produktionslinien",
+  ],
+  productionLineOptionalHint: [
+    "Tuotantolinjat ovat vapaaehtoisia. Voit käyttää laitteita ja kirjata huoltoja myös ilman niitä.",
+    "Production lines are optional. Equipment and maintenance work also work without them.",
+    "Produktionslinien sind optional. Anlagen und Wartungen funktionieren auch ohne sie.",
+  ],
+  invalidProductionLine: [
+    "Tarkista linjan nimi ja tunniste. Tunnisteen on oltava yksilöllinen.",
+    "Check the line name and identifier. Identifiers must be unique.",
+    "Name und Kennung prüfen. Kennungen müssen eindeutig sein.",
+  ],
+  duplicateLineIdentifier: [
+    "Tuotantolinjan tunniste on jo käytössä tässä yrityksessä.",
+    "This line identifier is already used in the company.",
+    "Diese Linienkennung ist im Unternehmen bereits vergeben.",
+  ],
+  lineUnavailable: [
+    "Tuotantolinja ei ole enää käytettävissä.",
+    "The production line is no longer available.",
+    "Die Produktionslinie ist nicht mehr verfügbar.",
+  ],
+  backToEquipment: [
+    "Takaisin laitteisiin",
+    "Back to equipment",
+    "Zurück zu Anlagen",
+  ],
+  lineHistoryScope: [
+    "Tässä näkyvät tuotantolinjan nykyisten laitteiden huoltotyöt. Laitteen historia säilyy myös linjaa vaihdettaessa.",
+    "Shows work for equipment currently on this line. Equipment history is preserved when moving between lines.",
+    "Aufträge der derzeit zugeordneten Anlagen. Der Anlagenverlauf bleibt bei Linienwechsel erhalten.",
+  ],
+  noOpenLineJobs: [
+    "Ei hakua vastaavia avoimia huoltotöitä.",
+    "No matching open maintenance jobs.",
+    "Keine passenden offenen Wartungen.",
+  ],
+  noLineHistory: [
+    "Ei hakua vastaavia valmistuneita huoltoja.",
+    "No matching completed maintenance.",
+    "Keine passenden abgeschlossenen Wartungen.",
+  ],
+
   skipContent: ["Siirry sisältöön", "Skip to content", "Zum Inhalt springen"],
   confirmedRecord: [
     "Vahvistettu havainto",
