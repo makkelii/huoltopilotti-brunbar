@@ -77,7 +77,7 @@ it("records confirmed fault evidence and retrieves it", async () => {
   });
   fireEvent.click(screen.getByRole("button", { name: "Etsi historiasta" }));
   expect(
-    screen.getByText("Vaurioitunut tiiviste vaihdettu"),
+    await screen.findByText("Vaurioitunut tiiviste vaihdettu"),
   ).toBeInTheDocument();
 });
 

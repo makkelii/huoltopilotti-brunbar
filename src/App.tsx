@@ -1,3 +1,5 @@
+import { KnowledgeSearch } from "./KnowledgeSearch";
+import { type HistoryService, demoHistoryService } from "./data/historySearch";
 import { repeatPlan, type RepeatPlan } from "./repeatMaintenance";
 import { applyLifecycle, type LifecycleRequest } from "./lifecycle";
 import type { Requirement } from "./domain";
@@ -28,13 +30,13 @@ import {
   useState,
   useRef,
   useCallback,
+  useMemo,
   type FormEvent,
 } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   Box,
   Wrench,
-  Radio,
   BarChart3,
   ChevronRight,
   Plus,
@@ -55,7 +57,6 @@ import { seed, requirements } from "./seed";
 import {
   id,
   readiness,
-  matchFaults,
   completeJob,
   csv,
   normalizeFreeUsage,
@@ -116,6 +117,18 @@ export default function App({
     }
     return seed();
   });
+  const historyService = useMemo<HistoryService>(
+    () =>
+      repository
+        ? {
+            search: (filter, signal) =>
+              repository.searchHistory(filter, signal),
+            record: (kind, id) => repository.historyRecord(kind, id),
+            options: () => repository.historyOptions(),
+          }
+        : demoHistoryService(store),
+    [repository, store],
+  );
   const searchCompletionInventory = useCallback(
     (
       group: "supplies" | "tools",
@@ -163,8 +176,6 @@ export default function App({
       Asset | Job | Item | ProductionLine | null
     >(null),
     [selected, setSelected] = useState<string | null>(null),
-    [symptoms, setSymptoms] = useState(""),
-    [searched, setSearched] = useState(false),
     [actual, setActual] = useState<Record<string, number>>({}),
     [listScope, setListScope] = useState("all"),
     [listAsset, setListAsset] = useState(""),
@@ -1202,78 +1213,14 @@ export default function App({
             </div>
           )}
           {page === "radar" && (
-            <div className="radar-layout">
-              <section className="card padded">
-                <div className="feature-icon">
-                  <Radio size={28} />
-                </div>
-                <h2>{t("symptoms")}</h2>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setSearched(true);
-                  }}
-                >
-                  <label htmlFor="symptoms">{t("description")}</label>
-                  <textarea
-                    id="symptoms"
-                    required
-                    minLength={4}
-                    value={symptoms}
-                    onChange={(e) => {
-                      setSymptoms(e.target.value);
-                      setSearched(false);
-                    }}
-                    placeholder={
-                      live
-                        ? t("symptoms")
-                        : local(store.faults[0].symptoms, lang)
-                    }
-                  />
-                  <Button type="submit">
-                    <Search size={17} />
-                    {t("find")}
-                  </Button>
-                </form>
-                <p className="notice">{t("limits")}</p>
-              </section>
-              <section>
-                {searched &&
-                  matchFaults(symptoms, store.faults, orgId).map(
-                    ({ fault, terms }) => (
-                      <article className="card padded match" key={fault.id}>
-                        <span className="badge operational">
-                          {t("confirmedRecord")} ·{" "}
-                          {Number.isFinite(Date.parse(fault.date))
-                            ? new Intl.DateTimeFormat(lang, {
-                                timeZone: "Europe/Helsinki",
-                              }).format(new Date(fault.date))
-                            : "—"}
-                        </span>
-                        <h2>
-                          {assetName(fault.assetId)}{" "}
-                          {store.assets.find((a) => a.id === fault.assetId)
-                            ?.archivedAt && (
-                            <span className="badge">{t("archived")}</span>
-                          )}
-                        </h2>
-                        <p>{local(fault.symptoms, lang)}</p>
-                        <h3>{t("cause")}</h3>
-                        <p>{local(fault.cause, lang)}</p>
-                        <h3>{t("reason")}</h3>
-                        <p>{terms.join(", ")}</p>
-                        <h3>{t("check")}</h3>
-                        <p>{local(fault.check, lang)}</p>
-                        <p className="notice">{t("limits")}</p>
-                      </article>
-                    ),
-                  )}
-                {searched &&
-                  !matchFaults(symptoms, store.faults, orgId).length && (
-                    <div className="card padded">{t("noMatch")}</div>
-                  )}
-              </section>
-            </div>
+            <KnowledgeSearch
+              service={historyService}
+              store={store}
+              lang={lang}
+              canWork={!live || snapshotRef.current?.role !== "viewer"}
+              onRepeat={repeatMaintenance}
+              onAsset={(id) => navigateEquipment({ assetId: id })}
+            />
           )}
           {page === "reports" && (
             <section className="card padded">
