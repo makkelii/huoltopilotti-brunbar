@@ -23,6 +23,7 @@ import {
 import { Repository, type Snapshot, RepositoryError } from "./data/repository";
 import { supabase } from "./data/supabase";
 import { CompletionItems } from "./CompletionItems";
+import { completionDraft } from "./completionDraft";
 import { searchDemoInventory } from "./data/inventorySearch";
 import { TemplateEditor } from "./TemplateEditor";
 import {
@@ -199,6 +200,7 @@ export default function App({
     [completionNotes, setCompletionNotes] = useState(""),
     [notes, setNotes] = useState(""),
     [completion, setCompletion] = useState(false),
+    [completionUnavailable, setCompletionUnavailable] = useState<string[]>([]),
     [error, setError] = useState("");
   useEffect(() => {
     if (live) return;
@@ -2243,12 +2245,18 @@ export default function App({
                       </Button>
                       <Button
                         onClick={() => {
+                          const draft = completionDraft(
+                            chosen.requirements,
+                            store.items,
+                            lang,
+                          );
                           setCompletion(true);
                           setCompletionNotes("");
-                          setNotes("");
-                          setFreeUsage([]);
+                          setNotes(t("completedAsPlanned"));
+                          setFreeUsage(draft.freeUsage);
+                          setCompletionUnavailable(draft.unavailable);
                           setActualMinutes(chosen.duration);
-                          setActual({});
+                          setActual(draft.actual);
                         }}
                       >
                         {t("complete")}
@@ -2265,6 +2273,13 @@ export default function App({
                   >
                     <fieldset className="form-fields" disabled={saving}>
                       <h3>{t("actual")}</h3>
+                      <p className="notice">{t("completionReview")}</p>
+                      {completionUnavailable.length > 0 && (
+                        <p role="alert" className="danger-text">
+                          {t("completionUnavailable")}:{" "}
+                          {completionUnavailable.join(", ")}
+                        </p>
+                      )}
                       <label>
                         {t("workDone")}
                         <textarea

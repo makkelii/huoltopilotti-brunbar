@@ -56,11 +56,9 @@ test("new equipment to repeated maintenance, archive, restore and final retireme
     .getByLabel("Tuotantolinja (valinnainen)")
     .selectOption({ label: "Koeajolinja · RUN-1" });
   await save();
-  const card = page
-    .locator(".equipment-card")
-    .filter({
-      has: page.getByRole("heading", { name: "Koeajomoottori", exact: true }),
-    });
+  const card = page.locator(".equipment-card").filter({
+    has: page.getByRole("heading", { name: "Koeajomoottori", exact: true }),
+  });
   await card
     .getByRole("button", { name: "Uusi huoltotyö", exact: true })
     .click();
@@ -95,14 +93,13 @@ test("new equipment to repeated maintenance, archive, restore and final retireme
       .getByLabel("Tehdyt työt")
       .fill("Laakeri vaihdettu, kaapeli tarkistettu ja koeajo tehty");
     await dialog.getByLabel("Käytetty aika (min)").fill("25");
-    if (consume) {
+    await expect(
+      dialog.getByRole("spinbutton", { name: "Käytetty määrä · SKF 6205-2RS" }),
+    ).toHaveValue("1");
+    if (!consume)
       await dialog
-        .getByText("Suunnitellut tarvikkeet", { exact: true })
+        .getByRole("button", { name: "Poista valinta · SKF 6205-2RS" })
         .click();
-      await dialog
-        .getByRole("button", { name: /Vahvista käyttöön · SKF 6205-2RS/ })
-        .click();
-    }
     await fits();
     await dialog
       .getByRole("button", { name: "Kirjaa valmiiksi", exact: true })
@@ -186,14 +183,12 @@ test("new equipment to repeated maintenance, archive, restore and final retireme
   await page
     .getByRole("button", { name: "Etsi historiasta", exact: true })
     .click();
-  const result = page
-    .locator("article")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "Moottorin ylivirtahuolto",
-        exact: true,
-      }),
-    });
+  const result = page.locator("article").filter({
+    has: page.getByRole("heading", {
+      name: "Moottorin ylivirtahuolto",
+      exact: true,
+    }),
+  });
   await expect(result).toContainText("Poistettu rekisteristä");
   await result
     .getByRole("button", { name: "Avaa alkuperäinen kirjaus", exact: true })

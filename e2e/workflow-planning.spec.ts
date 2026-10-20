@@ -109,16 +109,12 @@ test("plan work from a line, confirm actual usage and navigate immutable history
     .click();
   await dialog.getByLabel("Tehdyt työt").fill("Tiiviste vaihdettu ja testattu");
   await dialog.getByLabel("Käytetty aika (min)").fill("25");
-  await dialog.getByText("Suunnitellut tarvikkeet", { exact: true }).click();
-  await dialog
-    .getByRole("button", {
-      name: "Vahvista käyttöön · Oma tiiviste",
-      exact: true,
-    })
-    .click();
-  await dialog
-    .getByRole("button", { name: /Vahvista käyttöön · SKF 6205-2RS/ })
-    .click();
+  await expect(
+    dialog.getByRole("spinbutton", { name: "Käytetty määrä · Oma tiiviste" }),
+  ).toHaveValue("1");
+  await expect(
+    dialog.getByRole("spinbutton", { name: "Käytetty määrä · SKF 6205-2RS" }),
+  ).toHaveValue("1");
   await dialog
     .getByRole("button", { name: "Kirjaa valmiiksi", exact: true })
     .click();
