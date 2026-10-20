@@ -4,7 +4,7 @@ import { seed } from "../src/seed";
 test("plan work from a line, confirm actual usage and navigate immutable history on desktop and phone", async ({
   page,
   isMobile,
-}) => {
+}, testInfo) => {
   const data = seed();
   data.jobs = [];
   data.templateRequirements = [];
@@ -85,7 +85,9 @@ test("plan work from a line, confirm actual usage and navigate immutable history
     .getByLabel("Työohjeet ja valmistelut")
     .fill("Puhdista ennen asennusta");
   await page.screenshot({
-    path: `/workspace/work/prb-plan-${isMobile ? "mobile" : "desktop"}.png`,
+    path: testInfo.outputPath(
+      `prb-plan-${isMobile ? "mobile" : "desktop"}.png`,
+    ),
     fullPage: true,
   });
   await dialog.getByRole("button", { name: "Tallenna", exact: true }).click();
