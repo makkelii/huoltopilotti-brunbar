@@ -132,7 +132,7 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   const toolQuantity = await page.evaluate(() => {
     const saved = JSON.parse(localStorage.getItem("huoltopilotti-demo-v1")!);
     return saved.items.find(
-      (item: { name: string }) => item.name === "Momenttiavain",
+      (item: { id: string }) => item.id === "i1",
     ).quantity;
   });
   expect(toolQuantity).toBe(2);
