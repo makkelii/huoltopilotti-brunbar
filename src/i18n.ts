@@ -1,5 +1,40 @@
 export type Lang = "fi" | "en" | "de";
 const words = {
+  plannedName: [
+    "Tarpeen nimi tai ohje",
+    "Requirement name or instruction",
+    "Bedarfsname oder Anweisung",
+  ],
+  allStatuses: ["Kaikki tilat", "All statuses", "Alle Status"],
+  activeJobs: ["Avoimet työt", "Open jobs", "Offene Aufträge"],
+
+  planningHint: [
+    "Suunnitelma ei vähennä saldoja. Vahvista todellinen käyttö valmistuessa.",
+    "Planning does not consume stock. Confirm actual use at completion.",
+    "Planung verbraucht keinen Bestand. Tatsächlichen Verbrauch beim Abschluss bestätigen.",
+  ],
+  addPlannedNeed: [
+    "Lisää suunniteltu tarve tai ohje",
+    "Add planned requirement or instruction",
+    "Bedarf oder Anweisung hinzufügen",
+  ],
+  useSuggestion: ["Vahvista käyttöön", "Confirm used", "Verwendung bestätigen"],
+  currentLine: [
+    "Laitteen nykyinen tuotantolinja",
+    "Equipment’s current production line",
+    "Aktuelle Produktionslinie der Anlage",
+  ],
+  workInstructions: [
+    "Työohjeet ja valmistelut",
+    "Instructions and preparation",
+    "Anweisungen und Vorbereitung",
+  ],
+  invalidEquipment: [
+    "Valitse rajaukseen kuuluva laite.",
+    "Select equipment within the selected scope.",
+    "Wählen Sie eine Anlage aus dem gewählten Bereich.",
+  ],
+
   completedMaintenance: [
     "Valmistuneet huollot",
     "Completed maintenance",

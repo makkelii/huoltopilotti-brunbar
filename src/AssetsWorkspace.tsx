@@ -26,6 +26,10 @@ export function AssetsWorkspace({
   onHistory,
   onOpenJob,
   onClearSearch,
+  onCreateJob,
+  canWork = false,
+  target,
+  onResetTarget,
 }: {
   store: Store;
   lang: Lang;
@@ -39,10 +43,14 @@ export function AssetsWorkspace({
   onHistory: (asset: Asset) => void;
   onOpenJob: (job: Job) => void;
   onClearSearch?: () => void;
+  onCreateJob?: (assetId?: string, lineId?: string) => void;
+  canWork?: boolean;
+  onResetTarget?: () => void;
+  target?: { assetId?: string; lineId?: string } | null;
 }) {
   const t = (key: Parameters<typeof translate>[1]) => translate(lang, key);
   const [view, setView] = useState<View>("all");
-  const [lineId, setLineId] = useState<string | null>(null);
+  const [lineId, setLineId] = useState<string | null>(target?.lineId || null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [detail, setDetail] = useState<"assets" | "open" | "history">("assets");
   const lines = store.productionLines || [];
@@ -71,6 +79,7 @@ export function AssetsWorkspace({
           (asset) => view !== "unassigned" || !asset.productionLineId,
         )
   ).filter((asset) => {
+    if (target?.assetId && !lineId && asset.id !== target.assetId) return false;
     const group = lines.find((entry) => entry.id === asset.productionLineId);
     return matches(
       asset.name,
@@ -149,6 +158,15 @@ export function AssetsWorkspace({
                 </dl>
               </details>
               <div className="equipment-actions">
+                {canWork && onCreateJob && (
+                  <Button
+                    onClick={() =>
+                      onCreateJob(asset.id, asset.productionLineId || undefined)
+                    }
+                  >
+                    {t("newJob")}
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => onHistory(asset)}>
                   {t("history")}
                   <ArrowRight size={15} aria-hidden="true" />
@@ -182,6 +200,11 @@ export function AssetsWorkspace({
     );
   return (
     <div className="assets-workspace">
+      {target?.assetId && (
+        <Button variant="outline" onClick={onResetTarget}>
+          {t("allEquipment")}
+        </Button>
+      )}
       {!line && (
         <div className="hierarchy-toolbar">
           <div
@@ -230,6 +253,11 @@ export function AssetsWorkspace({
             <ArrowLeft size={16} />
             {t("productionLines")}
           </button>
+          {canWork && onCreateJob && (
+            <Button onClick={() => onCreateJob(undefined, line.id)}>
+              {t("newJob")}
+            </Button>
+          )}
           <section className="card production-line-overview">
             <div className="line-overview-heading">
               <span className="equipment-icon">

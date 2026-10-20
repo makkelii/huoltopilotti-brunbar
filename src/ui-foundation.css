@@ -841,3 +841,86 @@ main {
     margin-bottom: 24px;
   }
 }
+
+/* Shared planning controls use the existing foundation. */
+.equipment-picker {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 0;
+}
+.equipment-picker legend {
+  font-weight: 700;
+}
+.search-select,
+.planned-editor {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.planned-editor {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.planned-editor .usage-row > span {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.planned-editor details > label,
+.planned-editor details > .search-select {
+  margin: 12px 0;
+}
+.planned-editor input[type="number"] {
+  max-width: 120px;
+}
+.job-instructions {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.job-context {
+  margin: 16px 0;
+}
+.job-context button {
+  white-space: normal;
+  text-align: left;
+}
+.planned-usage li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+@media (max-width: 600px) {
+  .planned-editor .usage-row {
+    flex-wrap: wrap;
+  }
+  .planned-editor .usage-row > span {
+    flex-basis: 100%;
+  }
+}
+.job-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin: 16px 0;
+}
+.job-filters > .search-select {
+  flex: 1 1 200px;
+}
+@media (max-width: 600px) {
+  .job-filters > .search-select {
+    flex-basis: 100%;
+  }
+}
+.form-fields {
+  display: contents;
+}
+.form-lock {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}

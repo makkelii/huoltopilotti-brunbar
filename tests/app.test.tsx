@@ -43,6 +43,9 @@ it("creates a maintenance job", async () => {
   fireEvent.change(screen.getByLabelText("Nimi"), {
     target: { value: "New test service" },
   });
+  fireEvent.change(screen.getByRole("combobox", { name: "Laite" }), {
+    target: { value: "a1" },
+  });
   fireEvent.click(screen.getByRole("button", { name: "Tallenna" }));
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),

@@ -1,3 +1,11 @@
+import type { Requirement } from "./domain";
+import {
+  EquipmentPicker,
+  inEquipmentScope,
+  SearchSelect,
+  equipmentLabel,
+} from "./EquipmentPicker";
+import { RequirementsEditor } from "./RequirementsEditor";
 import { AssetsWorkspace } from "./AssetsWorkspace";
 import { saveProductionLine, archiveProductionLine } from "./productionLines";
 import { Dashboard } from "./Dashboard";
@@ -140,7 +148,7 @@ export default function App({
   };
   const [page, setPage] = useState<Page>("dashboard"),
     [query, setQuery] = useState(""),
-    [filter, setFilter] = useState("all"),
+    [filter, setFilter] = useState("active"),
     [inventoryType, setInventoryType] = useState("all"),
     [itemType, setItemType] = useState<Item["type"]>("tools"),
     [dark, setDark] = useState(localStorage.getItem("hp-theme") === "dark"),
@@ -156,6 +164,18 @@ export default function App({
     [symptoms, setSymptoms] = useState(""),
     [searched, setSearched] = useState(false),
     [actual, setActual] = useState<Record<string, number>>({}),
+    [listScope, setListScope] = useState("all"),
+    [listAsset, setListAsset] = useState(""),
+    [onlyMine, setOnlyMine] = useState(false),
+    [onlyOverdue, setOnlyOverdue] = useState(false),
+    [draftId, setDraftId] = useState<string>(() => id()),
+    [jobScope, setJobScope] = useState("all"),
+    [jobAsset, setJobAsset] = useState(""),
+    [jobRequirements, setJobRequirements] = useState<Requirement[]>([]),
+    [assetTarget, setAssetTarget] = useState<{
+      assetId?: string;
+      lineId?: string;
+    } | null>(null),
     [newAssetLine, setNewAssetLine] = useState<string | null>(null),
     [historyAsset, setHistoryAsset] = useState<string | null>(null),
     [actualMinutes, setActualMinutes] = useState(60),
@@ -201,8 +221,13 @@ export default function App({
   }, []);
   const go = (p: Page) => {
     setPage(p);
+    setAssetTarget(null);
     setQuery("");
-    setFilter("all");
+    setFilter("active");
+    setListScope("all");
+    setListAsset("");
+    setOnlyMine(false);
+    setOnlyOverdue(false);
     setMobile(false);
     window.location.hash = p;
   };
@@ -275,6 +300,7 @@ export default function App({
     kind: "asset" | "job" | "item" | "line",
     entry: Asset | Job | Item | ProductionLine | null = null,
     lineId: string | null = null,
+    assetId: string | null = null,
   ) => {
     if (
       live &&
@@ -288,12 +314,42 @@ export default function App({
       setError(t("noEquipment"));
       return;
     }
+    if (kind === "job") {
+      if (live && snapshotRef.current?.role === "viewer") return;
+      const previous = entry as Job | null;
+      if (previous?.status === "completed") return;
+      const selectedAsset = store.assets.find(
+        (a) => a.id === (previous?.assetId || assetId),
+      );
+      setJobAsset(selectedAsset?.id || "");
+      setJobScope(
+        selectedAsset
+          ? selectedAsset.productionLineId ||
+              (store.productionLines?.length ? "unassigned" : "all")
+          : lineId || "all",
+      );
+      setJobRequirements(
+        (previous?.requirements || store.templateRequirements).map((r) => ({
+          ...r,
+          label: [...r.label],
+          state: previous ? r.state : "unchecked",
+        })),
+      );
+    }
+    setDraftId(entry?.id || id());
     setEditing(entry);
     if (kind === "asset") setNewAssetLine(lineId);
     if (kind === "item") setItemType((entry as Item | null)?.type || "tools");
     setModal(kind);
     setError("");
   };
+  function navigateEquipment(target: { assetId?: string; lineId?: string }) {
+    setSelected(null);
+    setHistoryAsset(null);
+    setCompletion(false);
+    go("assets");
+    setAssetTarget(target);
+  }
   const active = store.jobs.filter((j) => j.status !== "completed"),
     today = workshopDate();
   const overdue = active.filter((j) => j.due < today);
@@ -301,8 +357,15 @@ export default function App({
   const filteredJobs = store.jobs.filter(
     (j) =>
       (filter === "all" ||
+        (filter === "active" && j.status !== "completed") ||
         j.status === filter ||
         (filter === "overdue" && j.due < today && j.status !== "completed")) &&
+      (!onlyMine || j.technician === userName) &&
+      (!onlyOverdue || (j.due < today && j.status !== "completed")) &&
+      (!listAsset || j.assetId === listAsset) &&
+      store.assets.some(
+        (a) => a.id === j.assetId && inEquipmentScope(a, listScope),
+      ) &&
       (j.name + " " + store.assets.find((a) => a.id === j.assetId)?.name)
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -318,7 +381,7 @@ export default function App({
     const f = new FormData(e.currentTarget),
       s = (k: string) => String(f.get(k) || "").trim();
     if (!s("name")) return;
-    const entryId = editing?.id || id();
+    const entryId = editing?.id || draftId;
     let ok = false;
     if (modal === "line") {
       try {
@@ -358,18 +421,30 @@ export default function App({
       });
     } else if (modal === "job") {
       const previous = editing as Job | null;
+      if (
+        !store.assets.some(
+          (a) =>
+            a.id === jobAsset &&
+            inEquipmentScope(
+              a,
+              store.productionLines?.length ? jobScope : "all",
+            ),
+        )
+      ) {
+        setError(t("invalidEquipment"));
+        return;
+      }
       const job: Job = {
         id: entryId,
         name: s("name"),
-        assetId: s("assetId"),
+        assetId: jobAsset,
         due: s("due"),
         priority: s("priority") as Job["priority"],
         status: previous?.status || "planned",
         technician: s("technician"),
         duration: Number(s("duration")),
-        requirements:
-          previous?.requirements ||
-          store.templateRequirements.map((r) => ({ ...r, state: "unchecked" })),
+        requirements: jobRequirements,
+        instructions: s("instructions"),
         notes: previous?.notes || "",
         actual: previous?.actual || {},
         recurrence: Number(s("recurrence")),
@@ -534,8 +609,25 @@ export default function App({
                     <Wrench size={17} />
                   </span>
                   <span>
-                    <strong>{labelJob(j)}</strong>
+                    <strong>
+                      {labelJob(j)}
+                      {j.priority === "high" && (
+                        <span className="badge high">{t("high")}</span>
+                      )}
+                    </strong>
                     <small>{assetName(j.assetId)} </small>
+                    {j.status !== "completed" && (
+                      <small>
+                        {
+                          store.productionLines?.find(
+                            (l) =>
+                              l.id ===
+                              store.assets.find((a) => a.id === j.assetId)
+                                ?.productionLineId,
+                          )?.name
+                        }
+                      </small>
+                    )}
                     <small className="mobile-job-meta">
                       {new Date(j.due + "T12:00:00").toLocaleDateString(lang)} ·{" "}
                       {t(
@@ -543,7 +635,7 @@ export default function App({
                           ? "overdue"
                           : j.status,
                       )}{" "}
-                      · {t(readiness(j))}
+                      · {t(j.priority)} · {j.technician}
                     </small>
                   </span>
                 </button>
@@ -576,19 +668,33 @@ export default function App({
                     .map((n) => n[0])
                     .join("")}
                 </span>
-                <span className="technician">{j.technician.split(" ")[0]}</span>
+                <span className="technician">{j.technician}</span>
               </td>
               <td>
                 <span className={"badge " + j.status}>{t(j.status)}</span>
               </td>
               <td>
-                <button
-                  className="icon-button"
-                  aria-label={t("edit")}
-                  onClick={() => open("job", j)}
-                >
-                  <ChevronRight size={18} />
-                </button>
+                {j.status === "completed" ||
+                (live && snapshotRef.current?.role === "viewer") ? (
+                  <button
+                    className="icon-button"
+                    aria-label={t(j.status === "completed" ? "history" : "job")}
+                    onClick={() => {
+                      setSelected(j.id);
+                      setCompletion(false);
+                    }}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                ) : (
+                  <button
+                    className="icon-button"
+                    aria-label={t("edit")}
+                    onClick={() => open("job", j)}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                )}
               </td>
             </tr>
           ))}
@@ -715,17 +821,23 @@ export default function App({
                             : t("workspaceTools")}
               </p>
             </div>
-            {page === "radar" && (
-              <Button
-                onClick={() => {
-                  setEditing(null);
-                  setModal("fault");
-                }}
-              >
-                <Plus size={17} />
-                {t("newFault")}
-              </Button>
-            )}
+            {page === "radar" &&
+              (!live || snapshotRef.current?.role !== "viewer") && (
+                <Button
+                  onClick={() => {
+                    if (!store.assets.length) {
+                      setError(t("noEquipment"));
+                      return;
+                    }
+                    setEditing(null);
+                    setDraftId(id());
+                    setModal("fault");
+                  }}
+                >
+                  <Plus size={17} />
+                  {t("newFault")}
+                </Button>
+              )}
             {page !== "radar" &&
               page !== "settings" &&
               (page === "assets" || page === "inventory"
@@ -791,7 +903,8 @@ export default function App({
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                 >
-                  <option value="all">{t("all")}</option>
+                  <option value="all">{t("allStatuses")}</option>
+                  <option value="active">{t("activeJobs")}</option>
                   {(
                     ["planned", "progress", "completed", "overdue"] as const
                   ).map((s) => (
@@ -804,14 +917,96 @@ export default function App({
             </div>
           )}
           {page === "jobs" && (
-            <section className="card">{jobTable(filteredJobs)}</section>
+            <>
+              <div className="job-filters">
+                {!!store.productionLines?.length && (
+                  <SearchSelect
+                    label={t("productionLines")}
+                    value={listScope}
+                    onChange={(v) => {
+                      const next = v || "all";
+                      setListScope(next);
+                      if (
+                        !store.assets.some(
+                          (a) =>
+                            a.id === listAsset && inEquipmentScope(a, next),
+                        )
+                      )
+                        setListAsset("");
+                    }}
+                    options={[
+                      { value: "all", label: t("allEquipment") },
+                      { value: "unassigned", label: t("noProductionLine") },
+                      ...store.productionLines.map((l) => ({
+                        value: l.id,
+                        label: [l.name, l.identifier]
+                          .filter(Boolean)
+                          .join(" · "),
+                      })),
+                    ]}
+                  />
+                )}
+                <SearchSelect
+                  key={listScope}
+                  lang={lang}
+                  label={t("equipment")}
+                  value={listAsset}
+                  onChange={setListAsset}
+                  options={store.assets
+                    .filter((a) => inEquipmentScope(a, listScope))
+                    .map((a) => ({ value: a.id, label: equipmentLabel(a) }))}
+                />
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={onlyMine}
+                    onChange={(e) => setOnlyMine(e.target.checked)}
+                  />
+                  {t("myJobs")}
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={onlyOverdue}
+                    onChange={(e) => setOnlyOverdue(e.target.checked)}
+                  />
+                  {t("overdue")}
+                </label>
+                <Button variant="outline" onClick={() => go("templates")}>
+                  {t("templates")}
+                </Button>
+              </div>
+              <section className="card">
+                {jobTable(filteredJobs)}
+                {!filteredJobs.length && (
+                  <p className="empty-state">
+                    {t("empty")}{" "}
+                    {query ||
+                    filter !== "active" ||
+                    listScope !== "all" ||
+                    listAsset ||
+                    onlyMine ||
+                    onlyOverdue
+                      ? t("adjustAssetSearch")
+                      : t("newJob")}
+                  </p>
+                )}
+              </section>
+            </>
           )}
           {page === "assets" && (
             <AssetsWorkspace
+              key={JSON.stringify(assetTarget)}
               store={store}
               lang={lang}
               query={query}
               canManage={canManage}
+              canWork={!live || snapshotRef.current?.role !== "viewer"}
+              target={assetTarget}
+              onResetTarget={() => setAssetTarget(null)}
+              onCreateJob={(assetId, lineId) =>
+                open("job", null, lineId || null, assetId || null)
+              }
               onClearSearch={() => setQuery("")}
               onCreateLine={() => open("line")}
               onEditLine={(line) => open("line", line)}
@@ -1092,8 +1287,9 @@ export default function App({
                     {t("approve")}
                   </Button>
                 )}
-              {live && canManage && (
+              {canManage && (
                 <TemplateEditor
+                  key={store.templateVersion}
                   items={store.items}
                   current={store.templateRequirements}
                   lang={lang}
@@ -1102,6 +1298,14 @@ export default function App({
                       ...store,
                       templateVersion: store.templateVersion + 1,
                       templateRequirements: reqs,
+                      templateHistory: [
+                        ...store.templateHistory,
+                        {
+                          version: store.templateVersion,
+                          approvedAt: new Date().toISOString(),
+                          requirements: store.templateRequirements,
+                        },
+                      ],
                     })
                   }
                 />
@@ -1307,7 +1511,7 @@ export default function App({
       <Dialog.Root
         open={modal !== null}
         onOpenChange={(o) => {
-          if (!o) {
+          if (!o && !savingRef.current) {
             setModal(null);
             localStorage.setItem("hp-welcome", "1");
           }
@@ -1364,349 +1568,388 @@ export default function App({
                 </Button>
               </>
             ) : (
-              <form onSubmit={submit} className="edit-form">
-                <label>
-                  {t(modal === "fault" ? "symptoms" : "name")}
-                  <input
-                    name="name"
-                    required
-                    maxLength={120}
-                    defaultValue={editing?.name}
-                  />
-                </label>
-                {modal === "fault" && (
-                  <>
-                    <label>
-                      {t("equipment")}
-                      <select required name="assetId">
-                        {store.assets.map((a) => (
-                          <option value={a.id} key={a.id}>
-                            {a.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      {t("confirmedCause")}
-                      <textarea name="cause" required minLength={5} />
-                    </label>
-                    <label className="checkbox-label">
-                      <input type="checkbox" required />
-                      {t("verified")}
-                    </label>
-                  </>
-                )}
-                {modal === "line" && (
-                  <>
-                    <div className="form-grid">
+              <form onSubmit={submit} className="edit-form" aria-busy={saving}>
+                <fieldset className="form-fields" disabled={saving}>
+                  {modal === "job" && (
+                    <EquipmentPicker
+                      assets={store.assets}
+                      lines={store.productionLines || []}
+                      lang={lang}
+                      scope={jobScope}
+                      assetId={jobAsset}
+                      onScope={setJobScope}
+                      onAsset={setJobAsset}
+                    />
+                  )}
+                  <label>
+                    {t(modal === "fault" ? "symptoms" : "name")}
+                    <input
+                      name="name"
+                      required
+                      maxLength={120}
+                      defaultValue={editing?.name}
+                    />
+                  </label>
+                  {modal === "fault" && (
+                    <>
                       <label>
-                        {t("lineIdentifier")}
-                        <input
-                          name="identifier"
-                          maxLength={80}
-                          defaultValue={(editing as ProductionLine)?.identifier}
-                        />
+                        {t("equipment")}
+                        <select required name="assetId">
+                          {store.assets.map((a) => (
+                            <option value={a.id} key={a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                       <label>
-                        {t("location")}
-                        <input
-                          name="location"
-                          maxLength={200}
-                          defaultValue={(editing as ProductionLine)?.location}
-                        />
+                        {t("confirmedCause")}
+                        <textarea name="cause" required minLength={5} />
                       </label>
-                    </div>
-                    <label>
-                      {t("description")}
-                      <textarea
-                        name="description"
-                        maxLength={4000}
-                        defaultValue={(editing as ProductionLine)?.description}
-                      />
-                    </label>
-                    <p className="notice">{t("productionLineOptionalHint")}</p>
-                  </>
-                )}
-                {modal === "asset" && (
-                  <>
-                    <label>
-                      {t("productionLineOptional")}
-                      <select
-                        name="productionLineId"
-                        defaultValue={
-                          (editing as Asset)?.productionLineId ||
-                          newAssetLine ||
-                          ""
-                        }
-                      >
-                        <option value="">{t("noProductionLine")}</option>
-                        {(store.productionLines || []).map((line) => (
-                          <option key={line.id} value={line.id}>
-                            {line.name}
-                            {line.identifier ? ` · ${line.identifier}` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="form-grid">
-                      {(
-                        ["manufacturer", "model", "serial", "location"] as const
-                      ).map((k) => (
-                        <label key={k}>
-                          {t(k)}
+                      <label className="checkbox-label">
+                        <input type="checkbox" required />
+                        {t("verified")}
+                      </label>
+                    </>
+                  )}
+                  {modal === "line" && (
+                    <>
+                      <div className="form-grid">
+                        <label>
+                          {t("lineIdentifier")}
                           <input
-                            name={k}
-                            defaultValue={(editing as Asset)?.[k]}
+                            name="identifier"
+                            maxLength={80}
+                            defaultValue={
+                              (editing as ProductionLine)?.identifier
+                            }
                           />
                         </label>
-                      ))}
-                    </div>
-                    <label>
-                      {t("description")}
-                      <textarea
-                        name="description"
-                        defaultValue={(editing as Asset)?.description}
-                      />
-                    </label>
-                  </>
-                )}
-                {modal === "job" && (
-                  <>
-                    <label>
-                      {t("description")}
-                      <textarea
-                        name="description"
-                        defaultValue={(editing as Job)?.description}
-                      />
-                    </label>
-
-                    <label>
-                      {t("equipment")}
-                      <select
-                        required
-                        name="assetId"
-                        defaultValue={(editing as Job)?.assetId}
-                      >
-                        {store.assets.map((a) => (
-                          <option value={a.id} key={a.id}>
-                            {a.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="form-grid">
-                      <label>
-                        {t("due")}
-                        <input
-                          required
-                          type="date"
-                          name="due"
-                          defaultValue={(editing as Job)?.due || today}
-                        />
-                      </label>
-                      <label>
-                        {t("priority")}
-                        <select
-                          name="priority"
-                          defaultValue={(editing as Job)?.priority || "normal"}
-                        >
-                          <option value="normal">{t("normal")}</option>
-                          <option value="high">{t("high")}</option>
-                        </select>
-                      </label>
-                      <label>
-                        {t("technician")}
-                        {live ? (
-                          <select
-                            name="technician"
-                            required
-                            defaultValue={
-                              (editing as Job)?.technician || userName
-                            }
-                          >
-                            {snapshotRef.current?.members
-                              .filter((m) => m.role !== "viewer")
-                              .map((m) => (
-                                <option key={m.userId} value={m.name}>
-                                  {m.name}
-                                </option>
-                              ))}
-                          </select>
-                        ) : (
+                        <label>
+                          {t("location")}
                           <input
-                            name="technician"
-                            required
-                            defaultValue={
-                              (editing as Job)?.technician || userName
-                            }
+                            name="location"
+                            maxLength={200}
+                            defaultValue={(editing as ProductionLine)?.location}
                           />
-                        )}
-                      </label>
+                        </label>
+                      </div>
                       <label>
-                        {t("duration")}
-                        <input
-                          type="number"
-                          min="1"
-                          max="10000"
-                          required
-                          name="duration"
-                          defaultValue={(editing as Job)?.duration || 60}
+                        {t("description")}
+                        <textarea
+                          name="description"
+                          maxLength={4000}
+                          defaultValue={
+                            (editing as ProductionLine)?.description
+                          }
                         />
                       </label>
-                    </div>
-                    <label>
-                      {t("recurrence")}
-                      <input
-                        type="number"
-                        name="recurrence"
-                        min="0"
-                        max="3650"
-                        required
-                        defaultValue={(editing as Job)?.recurrence || 0}
-                      />
-                    </label>
-                  </>
-                )}
-                {modal === "item" && (
-                  <>
-                    {itemType !== "tools" && (
+                      <p className="notice">
+                        {t("productionLineOptionalHint")}
+                      </p>
+                    </>
+                  )}
+                  {modal === "asset" && (
+                    <>
                       <label>
-                        {t("unit")}
-                        <input
-                          name="unit"
-                          defaultValue={(editing as Item)?.unit || "kpl"}
-                        />
-                      </label>
-                    )}
-                    <label>
-                      {t("externalId")}
-                      <input
-                        name="externalId"
-                        defaultValue={(editing as Item)?.externalId}
-                      />
-                    </label>
-                    <label>
-                      <input
-                        name="inactive"
-                        type="checkbox"
-                        defaultChecked={(editing as Item)?.inactive}
-                      />{" "}
-                      {t("inactive")}
-                    </label>
-
-                    <div className="form-grid">
-                      <label>
-                        {t("type")}
+                        {t("productionLineOptional")}
                         <select
-                          name="type"
-                          value={itemType}
-                          onChange={(e) =>
-                            setItemType(e.target.value as Item["type"])
+                          name="productionLineId"
+                          defaultValue={
+                            (editing as Asset)?.productionLineId ||
+                            newAssetLine ||
+                            ""
                           }
                         >
-                          {(["tools", "parts", "consumables"] as const).map(
-                            (k) => (
-                              <option key={k} value={k}>
-                                {t(k)}
-                              </option>
-                            ),
-                          )}
+                          <option value="">{t("noProductionLine")}</option>
+                          {(store.productionLines || []).map((line) => (
+                            <option key={line.id} value={line.id}>
+                              {line.name}
+                              {line.identifier ? ` · ${line.identifier}` : ""}
+                            </option>
+                          ))}
                         </select>
                       </label>
-                      {itemType !== "tools" && (
+                      <div className="form-grid">
+                        {(
+                          [
+                            "manufacturer",
+                            "model",
+                            "serial",
+                            "location",
+                          ] as const
+                        ).map((k) => (
+                          <label key={k}>
+                            {t(k)}
+                            <input
+                              name={k}
+                              defaultValue={(editing as Asset)?.[k]}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <label>
+                        {t("description")}
+                        <textarea
+                          name="description"
+                          defaultValue={(editing as Asset)?.description}
+                        />
+                      </label>
+                    </>
+                  )}
+                  {modal === "job" && (
+                    <>
+                      <label>
+                        {t("description")}
+                        <textarea
+                          name="description"
+                          defaultValue={(editing as Job)?.description}
+                        />
+                      </label>
+
+                      <div className="form-grid">
                         <label>
-                          {t("quantity")}
+                          {t("due")}
+                          <input
+                            required
+                            type="date"
+                            name="due"
+                            defaultValue={(editing as Job)?.due || today}
+                          />
+                        </label>
+                        <label>
+                          {t("priority")}
+                          <select
+                            name="priority"
+                            defaultValue={
+                              (editing as Job)?.priority || "normal"
+                            }
+                          >
+                            <option value="normal">{t("normal")}</option>
+                            <option value="high">{t("high")}</option>
+                          </select>
+                        </label>
+                        <label>
+                          {t("technician")}
+                          {live ? (
+                            <select
+                              name="technician"
+                              required
+                              defaultValue={
+                                (editing as Job)?.technician || userName
+                              }
+                            >
+                              {(editing as Job)?.technician &&
+                                !snapshotRef.current?.members.some(
+                                  (m) =>
+                                    m.name === (editing as Job).technician &&
+                                    m.role !== "viewer",
+                                ) && (
+                                  <option value={(editing as Job).technician}>
+                                    {(editing as Job).technician}
+                                  </option>
+                                )}
+                              {snapshotRef.current?.members
+                                .filter((m) => m.role !== "viewer")
+                                .map((m) => (
+                                  <option key={m.userId} value={m.name}>
+                                    {m.name}
+                                  </option>
+                                ))}
+                            </select>
+                          ) : (
+                            <input
+                              name="technician"
+                              required
+                              defaultValue={
+                                (editing as Job)?.technician || userName
+                              }
+                            />
+                          )}
+                        </label>
+                        <label>
+                          {t("duration")}
                           <input
                             type="number"
-                            name="quantity"
-                            min="0"
-                            step="any"
+                            min="1"
+                            max="10000"
                             required
-                            defaultValue={(editing as Item)?.quantity || 0}
+                            name="duration"
+                            defaultValue={(editing as Job)?.duration || 60}
+                          />
+                        </label>
+                      </div>
+                      <RequirementsEditor
+                        items={store.items}
+                        lang={lang}
+                        value={jobRequirements}
+                        onChange={setJobRequirements}
+                      />
+                      <label>
+                        {t("workInstructions")}
+                        <textarea
+                          name="instructions"
+                          maxLength={10000}
+                          defaultValue={(editing as Job)?.instructions}
+                        />
+                      </label>
+                      <label>
+                        {t("recurrence")}
+                        <input
+                          type="number"
+                          name="recurrence"
+                          min="0"
+                          max="3650"
+                          required
+                          defaultValue={(editing as Job)?.recurrence || 0}
+                        />
+                      </label>
+                    </>
+                  )}
+                  {modal === "item" && (
+                    <>
+                      {itemType !== "tools" && (
+                        <label>
+                          {t("unit")}
+                          <input
+                            name="unit"
+                            defaultValue={(editing as Item)?.unit || "kpl"}
                           />
                         </label>
                       )}
                       <label>
-                        {t("storage")}
+                        {t("externalId")}
                         <input
-                          name="location"
-                          required
-                          defaultValue={(editing as Item)?.location}
+                          name="externalId"
+                          defaultValue={(editing as Item)?.externalId}
                         />
                       </label>
                       <label>
-                        {t("manufacturer")}
                         <input
-                          name="manufacturer"
-                          defaultValue={(editing as Item)?.manufacturer}
+                          name="inactive"
+                          type="checkbox"
+                          defaultChecked={(editing as Item)?.inactive}
+                        />{" "}
+                        {t("inactive")}
+                      </label>
+
+                      <div className="form-grid">
+                        <label>
+                          {t("type")}
+                          <select
+                            name="type"
+                            value={itemType}
+                            onChange={(e) =>
+                              setItemType(e.target.value as Item["type"])
+                            }
+                          >
+                            {(["tools", "parts", "consumables"] as const).map(
+                              (k) => (
+                                <option key={k} value={k}>
+                                  {t(k)}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </label>
+                        {itemType !== "tools" && (
+                          <label>
+                            {t("quantity")}
+                            <input
+                              type="number"
+                              name="quantity"
+                              min="0"
+                              step="any"
+                              required
+                              defaultValue={(editing as Item)?.quantity || 0}
+                            />
+                          </label>
+                        )}
+                        <label>
+                          {t("storage")}
+                          <input
+                            name="location"
+                            required
+                            defaultValue={(editing as Item)?.location}
+                          />
+                        </label>
+                        <label>
+                          {t("manufacturer")}
+                          <input
+                            name="manufacturer"
+                            defaultValue={(editing as Item)?.manufacturer}
+                          />
+                        </label>
+                        <label>
+                          {lang === "fi"
+                            ? "Osanumero"
+                            : lang === "de"
+                              ? "Teilenummer"
+                              : "Part number"}
+                          <input
+                            name="partNumber"
+                            defaultValue={(editing as Item)?.partNumber}
+                          />
+                        </label>
+                        <label>
+                          {lang === "fi"
+                            ? "Kalibrointi voimassa"
+                            : lang === "de"
+                              ? "Kalibrierung gültig bis"
+                              : "Calibration valid until"}
+                          <input
+                            type="date"
+                            name="calibration"
+                            defaultValue={(editing as Item)?.calibration}
+                          />
+                        </label>
+                      </div>
+                      <label>
+                        {t("description")}
+                        <input
+                          name="spec"
+                          defaultValue={(editing as Item)?.spec}
                         />
                       </label>
                       <label>
                         {lang === "fi"
-                          ? "Osanumero"
+                          ? "Yhteensopivat laitteet"
                           : lang === "de"
-                            ? "Teilenummer"
-                            : "Part number"}
+                            ? "Kompatible Anlagen"
+                            : "Compatible equipment"}
                         <input
-                          name="partNumber"
-                          defaultValue={(editing as Item)?.partNumber}
+                          name="compatible"
+                          defaultValue={(editing as Item)?.compatible}
                         />
                       </label>
                       <label>
                         {lang === "fi"
-                          ? "Kalibrointi voimassa"
+                          ? "Hyväksytyt vaihtoehdot"
                           : lang === "de"
-                            ? "Kalibrierung gültig bis"
-                            : "Calibration valid until"}
+                            ? "Freigegebene Alternativen"
+                            : "Approved alternatives"}
                         <input
-                          type="date"
-                          name="calibration"
-                          defaultValue={(editing as Item)?.calibration}
+                          name="alternatives"
+                          defaultValue={(editing as Item)?.alternatives}
                         />
                       </label>
-                    </div>
-                    <label>
-                      {t("description")}
-                      <input
-                        name="spec"
-                        defaultValue={(editing as Item)?.spec}
-                      />
-                    </label>
-                    <label>
-                      {lang === "fi"
-                        ? "Yhteensopivat laitteet"
-                        : lang === "de"
-                          ? "Kompatible Anlagen"
-                          : "Compatible equipment"}
-                      <input
-                        name="compatible"
-                        defaultValue={(editing as Item)?.compatible}
-                      />
-                    </label>
-                    <label>
-                      {lang === "fi"
-                        ? "Hyväksytyt vaihtoehdot"
-                        : lang === "de"
-                          ? "Freigegebene Alternativen"
-                          : "Approved alternatives"}
-                      <input
-                        name="alternatives"
-                        defaultValue={(editing as Item)?.alternatives}
-                      />
-                    </label>
-                  </>
-                )}
-                {error && <p role="alert">{error}</p>}
-                <div className="dialog-actions">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setModal(null)}
-                  >
-                    {t("cancel")}
-                  </Button>
-                  <Button type="submit">{t("save")}</Button>
-                </div>
+                    </>
+                  )}
+                  {error && <p role="alert">{error}</p>}
+                  <div className="dialog-actions">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={saving}
+                      onClick={() => setModal(null)}
+                    >
+                      {t("cancel")}
+                    </Button>
+                    <Button type="submit" disabled={saving}>
+                      {t("save")}
+                    </Button>
+                  </div>
+                </fieldset>
               </form>
             )}
           </Dialog.Content>
@@ -1715,7 +1958,7 @@ export default function App({
       <Dialog.Root
         open={!!chosen}
         onOpenChange={(o) => {
-          if (!o) {
+          if (!o && !savingRef.current) {
             setSelected(null);
             setError("");
           }
@@ -1741,6 +1984,32 @@ export default function App({
             <Dialog.Close className="dialog-close" aria-label={t("close")}>
               <X size={20} />
             </Dialog.Close>
+            {chosen && store.assets.some((a) => a.id === chosen.assetId) && (
+              <div className="button-row job-context">
+                <Button
+                  variant="outline"
+                  onClick={() => navigateEquipment({ assetId: chosen.assetId })}
+                >
+                  {t("equipment")}: {assetName(chosen.assetId)}
+                </Button>
+                {store.productionLines
+                  ?.filter(
+                    (l) =>
+                      l.id ===
+                      store.assets.find((a) => a.id === chosen.assetId)
+                        ?.productionLineId,
+                  )
+                  .map((l) => (
+                    <Button
+                      key={l.id}
+                      variant="outline"
+                      onClick={() => navigateEquipment({ lineId: l.id })}
+                    >
+                      {t("currentLine")}: {l.name}
+                    </Button>
+                  ))}
+              </div>
+            )}
             {chosen?.status !== "completed" && (
               <p className="safety-notice">
                 <ShieldCheck size={22} />
@@ -1751,8 +2020,17 @@ export default function App({
               <>
                 {chosen.status !== "completed" && !completion && (
                   <>
+                    {chosen.description && (
+                      <p className="job-instructions">{chosen.description}</p>
+                    )}
+                    {chosen.instructions && (
+                      <section className="job-instructions">
+                        <h3>{t("workInstructions")}</h3>
+                        <p>{chosen.instructions}</p>
+                      </section>
+                    )}
                     <div className="section-heading">
-                      <h2>{t("readiness")}</h2>
+                      <h2>{t("plannedSupplies")}</h2>
                       <span className="badge planned">
                         {t(readiness(chosen))}
                       </span>
@@ -1792,7 +2070,11 @@ export default function App({
                           </div>
                           <select
                             aria-label={local(r.label, lang)}
-                            disabled={chosen.status === "completed"}
+                            disabled={
+                              chosen.status === "completed" ||
+                              saving ||
+                              (live && snapshotRef.current?.role === "viewer")
+                            }
                             value={r.state}
                             onChange={(e) =>
                               change({
@@ -1829,37 +2111,40 @@ export default function App({
                     })}
                   </>
                 )}
-                {chosen.status !== "completed" && !completion && (
-                  <div className="button-row">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        change({
-                          ...store,
-                          jobs: store.jobs.map((j) =>
-                            j.id === chosen.id
-                              ? { ...j, status: "progress" }
-                              : j,
-                          ),
-                        });
-                      }}
-                    >
-                      {t("progress")}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setCompletion(true);
-                        setCompletionNotes("");
-                        setNotes("");
-                        setFreeUsage([]);
-                        setActualMinutes(chosen.duration);
-                        setActual({});
-                      }}
-                    >
-                      {t("complete")}
-                    </Button>
-                  </div>
-                )}
+                {chosen.status !== "completed" &&
+                  !completion &&
+                  (!live || snapshotRef.current?.role !== "viewer") && (
+                    <div className="button-row">
+                      <Button
+                        disabled={saving}
+                        variant="outline"
+                        onClick={() => {
+                          change({
+                            ...store,
+                            jobs: store.jobs.map((j) =>
+                              j.id === chosen.id
+                                ? { ...j, status: "progress" }
+                                : j,
+                            ),
+                          });
+                        }}
+                      >
+                        {t("progress")}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setCompletion(true);
+                          setCompletionNotes("");
+                          setNotes("");
+                          setFreeUsage([]);
+                          setActualMinutes(chosen.duration);
+                          setActual({});
+                        }}
+                      >
+                        {t("complete")}
+                      </Button>
+                    </div>
+                  )}
                 {completion && (
                   <form
                     className="completion"
@@ -1868,53 +2153,56 @@ export default function App({
                       finish();
                     }}
                   >
-                    <h3>{t("actual")}</h3>
-                    <label>
-                      {t("workDone")}
-                      <textarea
-                        required
-                        maxLength={10000}
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
+                    <fieldset className="form-fields" disabled={saving}>
+                      <h3>{t("actual")}</h3>
+                      <label>
+                        {t("workDone")}
+                        <textarea
+                          required
+                          maxLength={10000}
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t("actualMinutes")}
+                        <input
+                          type="number"
+                          min="1"
+                          max="100000"
+                          required
+                          value={actualMinutes}
+                          onChange={(e) =>
+                            setActualMinutes(Number(e.target.value))
+                          }
+                        />
+                      </label>
+                      <CompletionItems
+                        lang={lang}
+                        actual={actual}
+                        onChange={setActual}
+                        search={searchCompletionInventory}
+                        requirements={chosen.requirements}
+                        inventory={store.items}
+                        freeUsage={freeUsage}
+                        onFreeUsageChange={setFreeUsage}
                       />
-                    </label>
-                    <label>
-                      {t("actualMinutes")}
-                      <input
-                        type="number"
-                        min="1"
-                        max="100000"
-                        required
-                        value={actualMinutes}
-                        onChange={(e) =>
-                          setActualMinutes(Number(e.target.value))
-                        }
-                      />
-                    </label>
-                    <CompletionItems
-                      lang={lang}
-                      actual={actual}
-                      onChange={setActual}
-                      search={searchCompletionInventory}
-                      requirements={chosen.requirements}
-                      freeUsage={freeUsage}
-                      onFreeUsageChange={setFreeUsage}
-                    />
-                    <label>
-                      {t("additionalNotes")}
-                      <textarea
-                        value={completionNotes}
-                        onChange={(e) => setCompletionNotes(e.target.value)}
-                      />
-                    </label>
-                    {error && (
-                      <p role="alert" className="danger-text">
-                        {error}
-                      </p>
-                    )}
-                    <Button type="submit" disabled={saving || !notes.trim()}>
-                      {t("recordComplete")}
-                    </Button>
+                      <label>
+                        {t("additionalNotes")}
+                        <textarea
+                          value={completionNotes}
+                          onChange={(e) => setCompletionNotes(e.target.value)}
+                        />
+                      </label>
+                      {error && (
+                        <p role="alert" className="danger-text">
+                          {error}
+                        </p>
+                      )}
+                      <Button type="submit" disabled={saving || !notes.trim()}>
+                        {t("recordComplete")}
+                      </Button>
+                    </fieldset>
                   </form>
                 )}
                 {chosen.status === "completed" && (
@@ -1943,6 +2231,14 @@ export default function App({
               {assetName(historyAsset || "")} · {t("maintenanceHistory")}
             </Dialog.Title>
             <Dialog.Description>{t("completed")}</Dialog.Description>
+            {historyAsset && (
+              <Button
+                variant="outline"
+                onClick={() => navigateEquipment({ assetId: historyAsset })}
+              >
+                {t("equipment")}: {assetName(historyAsset)}
+              </Button>
+            )}
             {!store.jobs.some(
               (j) => j.assetId === historyAsset && j.status === "completed",
             ) && <p>{t("noMaintenanceHistory")}</p>}

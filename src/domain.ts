@@ -87,6 +87,7 @@ export type Job = {
   recurrence: number;
   legacyReconstructed?: boolean;
   description?: string;
+  instructions?: string;
   actualMinutes?: number;
   completionNotes?: string;
   performedBy?: string;

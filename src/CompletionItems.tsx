@@ -16,6 +16,7 @@ type Props = {
   onChange: (value: Record<string, number>) => void;
   search: InventorySearch;
   requirements: Requirement[];
+  inventory?: Item[];
   freeUsage?: FreeUsage[];
   onFreeUsageChange?: (value: FreeUsage[]) => void;
 };
@@ -26,6 +27,7 @@ export function CompletionItems({
   onChange,
   search,
   requirements,
+  inventory = [],
   freeUsage = [],
   onFreeUsageChange,
 }: Props) {
@@ -187,9 +189,27 @@ export function CompletionItems({
                 <div className="usage-row" key={`manual-${index}`}>
                   <strong>{entry.name}</strong>
                   {entry.type === "parts" && (
-                    <span>
-                      {entry.quantity} {t("pieceUnit")}
-                    </span>
+                    <label>
+                      {t("usedQuantity")}
+                      <input
+                        aria-label={`${t("usedQuantity")} · ${entry.name}`}
+                        type="number"
+                        required
+                        min="0.01"
+                        max="100000000"
+                        step="any"
+                        value={entry.quantity}
+                        onChange={(e) =>
+                          onFreeUsageChange?.(
+                            freeUsage.map((x, i) =>
+                              i === index && x.type === "parts"
+                                ? { ...x, quantity: Number(e.target.value) }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
                   )}
                   <Button
                     type="button"
@@ -211,24 +231,88 @@ export function CompletionItems({
           </p>
         </section>
       ))}
-      {requirements.some(
-        (r) =>
-          r.itemId && ["tools", "parts", "consumables"].includes(r.category),
+      {requirements.some((r) =>
+        ["tools", "parts", "consumables"].includes(r.category),
       ) && (
         <details className="planned-usage">
           <summary>{t("plannedSupplies")}</summary>
           <p>{t("plannedNotUsed")}</p>
           <ul>
             {requirements
-              .filter(
-                (r) =>
-                  r.itemId &&
-                  ["tools", "parts", "consumables"].includes(r.category),
+              .filter((r) =>
+                ["tools", "parts", "consumables"].includes(r.category),
               )
               .map((r) => (
                 <li key={r.id}>
                   {local(r.label, lang)}
                   {r.category !== "tools" && ` · ${r.quantity}`}
+                  {(() => {
+                    const item = inventory.find(
+                      (i) => i.id === r.itemId && !i.inactive,
+                    );
+                    const used = r.itemId
+                      ? actual[r.itemId] !== undefined
+                      : freeUsage.some(
+                          (x) =>
+                            x.name === local(r.label, lang) &&
+                            (x.type === "tools") === (r.category === "tools"),
+                        );
+                    const unavailable =
+                      !!r.itemId &&
+                      (!item ||
+                        (item.type !== "tools" &&
+                          item.quantity - item.reserved <= 0));
+                    return (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={
+                          used ||
+                          unavailable ||
+                          (!r.itemId &&
+                            (!onFreeUsageChange || freeUsage.length >= 100))
+                        }
+                        onClick={() => {
+                          if (item) {
+                            setSelected((rows) =>
+                              rows.some((i) => i.id === item.id)
+                                ? rows
+                                : [...rows, item],
+                            );
+                            onChange({
+                              ...actual,
+                              [item.id]:
+                                item.type === "tools"
+                                  ? 1
+                                  : Math.min(
+                                      r.quantity,
+                                      item.quantity - item.reserved,
+                                    ),
+                            });
+                          } else if (!r.itemId)
+                            onFreeUsageChange?.([
+                              ...freeUsage,
+                              r.category === "tools"
+                                ? { type: "tools", name: local(r.label, lang) }
+                                : {
+                                    type: "parts",
+                                    name: local(r.label, lang),
+                                    quantity: r.quantity,
+                                  },
+                            ]);
+                        }}
+                      >
+                        {t(
+                          used
+                            ? "alreadySelected"
+                            : unavailable
+                              ? "inventoryUnavailable"
+                              : "useSuggestion",
+                        )}{" "}
+                        · {local(r.label, lang)}
+                      </Button>
+                    );
+                  })()}
                 </li>
               ))}
           </ul>
