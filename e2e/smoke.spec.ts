@@ -182,6 +182,10 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
   await page
     .getByLabel("Nimi", { exact: true })
     .fill("Renamed and archived bearing");
+  await page
+    .getByRole("dialog")
+    .getByText("Lisätiedot", { exact: true })
+    .click();
   await page.getByLabel("Poistettu käytöstä", { exact: true }).check();
   await page.getByRole("button", { name: "Tallenna", exact: true }).click();
   await page.reload();
