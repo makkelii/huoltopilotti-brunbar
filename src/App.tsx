@@ -1,3 +1,5 @@
+import { AssetsWorkspace } from "./AssetsWorkspace";
+import { saveProductionLine, archiveProductionLine } from "./productionLines";
 import { Dashboard } from "./Dashboard";
 import { workshopDate } from "./dashboard";
 import { AppNavigation, isPage, type Page } from "./AppNavigation";
@@ -25,7 +27,6 @@ import {
   Radio,
   BarChart3,
   ChevronRight,
-  Factory,
   Plus,
   Search,
   ArrowRight,
@@ -51,6 +52,7 @@ import {
   type FreeUsage,
   type Store,
   type Asset,
+  type ProductionLine,
   type Job,
   type Item,
 } from "./domain";
@@ -145,13 +147,16 @@ export default function App({
     [mobile, setMobile] = useState(false),
     [toast, setToast] = useState(""),
     [modal, setModal] = useState<
-      "asset" | "job" | "item" | "fault" | "onboarding" | "help" | null
+      "asset" | "job" | "item" | "line" | "fault" | "onboarding" | "help" | null
     >(() => (localStorage.getItem("hp-welcome") ? null : "onboarding")),
-    [editing, setEditing] = useState<Asset | Job | Item | null>(null),
+    [editing, setEditing] = useState<
+      Asset | Job | Item | ProductionLine | null
+    >(null),
     [selected, setSelected] = useState<string | null>(null),
     [symptoms, setSymptoms] = useState(""),
     [searched, setSearched] = useState(false),
     [actual, setActual] = useState<Record<string, number>>({}),
+    [newAssetLine, setNewAssetLine] = useState<string | null>(null),
     [historyAsset, setHistoryAsset] = useState<string | null>(null),
     [actualMinutes, setActualMinutes] = useState(60),
     [freeUsage, setFreeUsage] = useState<FreeUsage[]>([]),
@@ -231,7 +236,9 @@ export default function App({
         t(
           e instanceof RepositoryError && e.code === "40001"
             ? "conflict"
-            : "saveError",
+            : e instanceof RepositoryError && e.code === "23505"
+              ? "duplicateLineIdentifier"
+              : "saveError",
         ),
       );
       return false;
@@ -265,10 +272,15 @@ export default function App({
   }, [repository, modal, selected]);
 
   const open = (
-    kind: "asset" | "job" | "item",
-    entry: Asset | Job | Item | null = null,
+    kind: "asset" | "job" | "item" | "line",
+    entry: Asset | Job | Item | ProductionLine | null = null,
+    lineId: string | null = null,
   ) => {
-    if (live && !canManage && (kind === "asset" || kind === "item")) {
+    if (
+      live &&
+      !canManage &&
+      (kind === "asset" || kind === "item" || kind === "line")
+    ) {
       setError(t("accessError"));
       return;
     }
@@ -277,6 +289,7 @@ export default function App({
       return;
     }
     setEditing(entry);
+    if (kind === "asset") setNewAssetLine(lineId);
     if (kind === "item") setItemType((entry as Item | null)?.type || "tools");
     setModal(kind);
     setError("");
@@ -307,7 +320,25 @@ export default function App({
     if (!s("name")) return;
     const entryId = editing?.id || id();
     let ok = false;
-    if (modal === "asset") {
+    if (modal === "line") {
+      try {
+        const next = saveProductionLine(store, {
+          id: entryId,
+          name: s("name"),
+          identifier: s("identifier"),
+          location: s("location"),
+          description: s("description"),
+        });
+        ok =
+          JSON.stringify(next.productionLines || []) ===
+          JSON.stringify(store.productionLines || [])
+            ? true
+            : await change(next);
+      } catch {
+        setError(t("invalidProductionLine"));
+        return;
+      }
+    } else if (modal === "asset") {
       const asset: Asset = {
         id: entryId,
         name: s("name"),
@@ -316,7 +347,8 @@ export default function App({
         serial: s("serial"),
         location: s("location"),
         description: s("description"),
-        status: "operational",
+        status: (editing as Asset | null)?.status || "operational",
+        productionLineId: s("productionLineId") || null,
       };
       ok = await change({
         ...store,
@@ -696,7 +728,9 @@ export default function App({
             )}
             {page !== "radar" &&
               page !== "settings" &&
-              (!live || snapshotRef.current?.role !== "viewer") && (
+              (page === "assets" || page === "inventory"
+                ? canManage
+                : !live || snapshotRef.current?.role !== "viewer") && (
                 <Button
                   onClick={() =>
                     page === "assets"
@@ -773,48 +807,28 @@ export default function App({
             <section className="card">{jobTable(filteredJobs)}</section>
           )}
           {page === "assets" && (
-            <div className="asset-grid">
-              {store.assets
-                .filter((a) =>
-                  (a.name + " " + a.location)
-                    .toLowerCase()
-                    .includes(query.toLowerCase()),
-                )
-                .map((a, i) => (
-                  <section className="card asset-card" key={a.id}>
-                    <div className={"asset-visual asset-visual-" + (i % 3)}>
-                      <Factory size={58} strokeWidth={1.2} />
-                      <span className={"badge " + a.status}>{t(a.status)}</span>
-                    </div>
-                    <div className="asset-info">
-                      <small>{a.serial || a.model || t("equipment")}</small>
-                      <h2>{a.name}</h2>
-                      <p>
-                        {a.manufacturer} · {a.model}
-                      </p>
-                      <div className="asset-bottom">
-                        <span>{a.location}</span>
-                        <Button
-                          variant="outline"
-                          onClick={() => open("asset", a)}
-                        >
-                          {t("edit")}
-                          <ChevronRight size={15} />
-                        </Button>
-                      </div>
-                      <button
-                        className="text-button"
-                        onClick={() => {
-                          setHistoryAsset(a.id);
-                        }}
-                      >
-                        {t("history")}
-                        <ArrowRight size={15} />
-                      </button>
-                    </div>
-                  </section>
-                ))}
-            </div>
+            <AssetsWorkspace
+              store={store}
+              lang={lang}
+              query={query}
+              canManage={canManage}
+              onClearSearch={() => setQuery("")}
+              onCreateLine={() => open("line")}
+              onEditLine={(line) => open("line", line)}
+              onArchiveLine={async (line) =>
+                change(archiveProductionLine(store, line.id))
+              }
+              onCreateAsset={(lineId) => open("asset", null, lineId)}
+              onEditAsset={(asset) => open("asset", asset)}
+              onHistory={(asset) => setHistoryAsset(asset.id)}
+              onOpenJob={(job) => {
+                setSelected(job.id);
+                setCompletion(false);
+                setActual({});
+                setNotes(job.notes);
+                setError("");
+              }}
+            />
           )}
           {page === "inventory" && (
             <div className="card table-scroll">
@@ -1307,13 +1321,15 @@ export default function App({
                 ? t("onboarding")
                 : modal === "help"
                   ? t("help")
-                  : modal === "asset"
-                    ? t(editing ? "edit" : "newAsset")
-                    : modal === "item"
-                      ? t(editing ? "edit" : "addItem")
-                      : modal === "fault"
-                        ? t("newFault")
-                        : t(editing ? "edit" : "newJob")}
+                  : modal === "line"
+                    ? t(editing ? "editProductionLine" : "newProductionLine")
+                    : modal === "asset"
+                      ? t(editing ? "edit" : "newAsset")
+                      : modal === "item"
+                        ? t(editing ? "edit" : "addItem")
+                        : modal === "fault"
+                          ? t("newFault")
+                          : t(editing ? "edit" : "newJob")}
             </Dialog.Title>
             <Dialog.Description className="dialog-description">
               {modal === "onboarding"
@@ -1380,8 +1396,58 @@ export default function App({
                     </label>
                   </>
                 )}
+                {modal === "line" && (
+                  <>
+                    <div className="form-grid">
+                      <label>
+                        {t("lineIdentifier")}
+                        <input
+                          name="identifier"
+                          maxLength={80}
+                          defaultValue={(editing as ProductionLine)?.identifier}
+                        />
+                      </label>
+                      <label>
+                        {t("location")}
+                        <input
+                          name="location"
+                          maxLength={200}
+                          defaultValue={(editing as ProductionLine)?.location}
+                        />
+                      </label>
+                    </div>
+                    <label>
+                      {t("description")}
+                      <textarea
+                        name="description"
+                        maxLength={4000}
+                        defaultValue={(editing as ProductionLine)?.description}
+                      />
+                    </label>
+                    <p className="notice">{t("productionLineOptionalHint")}</p>
+                  </>
+                )}
                 {modal === "asset" && (
                   <>
+                    <label>
+                      {t("productionLineOptional")}
+                      <select
+                        name="productionLineId"
+                        defaultValue={
+                          (editing as Asset)?.productionLineId ||
+                          newAssetLine ||
+                          ""
+                        }
+                      >
+                        <option value="">{t("noProductionLine")}</option>
+                        {(store.productionLines || []).map((line) => (
+                          <option key={line.id} value={line.id}>
+                            {line.name}
+                            {line.identifier ? ` · ${line.identifier}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <div className="form-grid">
                       {(
                         ["manufacturer", "model", "serial", "location"] as const

@@ -14,6 +14,7 @@ test("real SDK login, database read/write contract, reload persistence and sign-
     store: {
       version: 1,
       assets: [] as Record<string, unknown>[],
+      productionLines: [] as Record<string, unknown>[],
       items: [],
       jobs: [],
       faults: [],
@@ -89,8 +90,28 @@ test("real SDK login, database read/write contract, reload persistence and sign-
       const payload = request.postDataJSON();
       expect(payload.p_org).toBe(org);
       expect(payload.p_revision).toBe(snapshot.revision);
-      expect(payload.p_kind).toBe("asset");
-      snapshot.store.assets.push(payload.p_data);
+      if (payload.p_kind === "asset") {
+        const index = snapshot.store.assets.findIndex(
+          (asset) => asset.id === payload.p_data.id,
+        );
+        if (index < 0) snapshot.store.assets.push(payload.p_data);
+        else snapshot.store.assets[index] = payload.p_data;
+      } else if (payload.p_kind === "production_line") {
+        const index = snapshot.store.productionLines.findIndex(
+          (line) => line.id === payload.p_data.id,
+        );
+        if (index < 0) snapshot.store.productionLines.push(payload.p_data);
+        else snapshot.store.productionLines[index] = payload.p_data;
+      } else if (payload.p_kind === "production_line_archive") {
+        snapshot.store.productionLines = snapshot.store.productionLines.filter(
+          (line) => line.id !== payload.p_data.id,
+        );
+        snapshot.store.assets = snapshot.store.assets.map((asset) =>
+          asset.productionLineId === payload.p_data.id
+            ? { ...asset, productionLineId: null }
+            : asset,
+        );
+      } else throw Error("Unexpected mutation");
       snapshot.revision++;
       await route.fulfill({ headers, json: null });
       return;
@@ -128,10 +149,47 @@ test("real SDK login, database read/write contract, reload persistence and sign-
   await expect(
     page.getByRole("heading", { name: "Persistent contract motor" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Lisää tuotantolinja", exact: true })
+    .click();
+  await page.getByLabel("Nimi", { exact: true }).fill("Live packing line");
+  await page.getByLabel("Tuotantolinjan tunniste (valinnainen)").fill("LIVE-1");
+  await page.getByRole("button", { name: "Tallenna", exact: true }).click();
+  const assetCard = page
+    .locator(".asset-card")
+    .filter({ hasText: "Persistent contract motor" });
+  await assetCard.getByRole("button", { name: "Muokkaa", exact: true }).click();
+  await page
+    .getByLabel("Tuotantolinja (valinnainen)")
+    .selectOption({ label: "Live packing line · LIVE-1" });
+  await page.getByRole("button", { name: "Tallenna", exact: true }).click();
+  await expect(
+    assetCard.getByRole("button", { name: "Live packing line", exact: true }),
+  ).toBeVisible();
+  expect(snapshot.store.assets[0].productionLineId).toBe(
+    snapshot.store.productionLines[0].id,
+  );
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Persistent contract motor" }),
   ).toBeVisible();
+  await assetCard
+    .getByRole("button", { name: "Live packing line", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Poista linja käytöstä", exact: true })
+    .click();
+  await page
+    .getByRole("button", {
+      name: "Poista käytöstä ja säilytä laitteet",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Ei tuotantolinjoja" }),
+  ).toBeVisible();
+  expect(snapshot.store.assets).toHaveLength(1);
+  expect(snapshot.store.assets[0].productionLineId).toBeNull();
   expect(
     await page.evaluate(() => localStorage.getItem("huoltopilotti-demo-v1")),
   ).toBeNull();
