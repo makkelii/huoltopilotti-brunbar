@@ -15,6 +15,7 @@ for migration in supabase/migrations/*private.sql; do
   docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < "$migration"
 done
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200003_history_tenancy.sql
+docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/migrations/202610200004_tools_without_stock.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/private.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/history.sql
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-setup.sql
@@ -33,3 +34,4 @@ fi
 grep -q 'stale revision' work/db-tests/*.log
 docker exec -i "$db_test_name" psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/concurrency-assert.sql
 echo "PostgreSQL tenant, invitation, shared-data and concurrent inventory tests passed"
+

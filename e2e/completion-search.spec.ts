@@ -6,6 +6,7 @@ test("authenticated completion searches the server for an uncached part and pres
 }) => {
   const org = "20000000-0000-0000-0000-000000000001";
   const uid = "10000000-0000-0000-0000-000000000001";
+  const toolId = "40000000-0000-0000-0000-000000000002";
   const partId = "40000000-0000-0000-0000-000000000001";
   const store = seed();
   store.items = []; // Search must not rely on the application's previously loaded inventory.
@@ -81,6 +82,22 @@ test("authenticated completion searches the server for an uncached part and pres
       searches++;
       expect(url.searchParams.get("organization_id")).toBe(`eq.${org}`);
       expect(url.searchParams.get("limit")).toBe("26");
+      if (url.searchParams.get("type") === "in.(tool)") {
+        return route.fulfill({
+          headers,
+          json: [
+            {
+              id: toolId,
+              name: "Calibrated wrench",
+              type: "tool",
+              quantity: 0,
+              reserved: 2,
+              part_number: "TOOL-42",
+              data: {},
+            },
+          ],
+        });
+      }
       expect(url.searchParams.get("or")).toContain("ERP-42");
       expect(url.searchParams.get("type")).toBe("in.(part,consumable)");
       return route.fulfill({
@@ -103,7 +120,7 @@ test("authenticated completion searches the server for an uncached part and pres
       expect(payload.p_org).toBe(org);
       expect(payload.p_kind).toBe("complete");
       expect(payload.p_revision).toBe(0);
-      expect(payload.p_data.actual).toEqual({ [partId]: 2.5 });
+      expect(payload.p_data.actual).toEqual({ [partId]: 2.5, [toolId]: 1 });
       expect(payload.p_data.notes).toBe("Verified server completion");
       expect(payload.p_data.actualMinutes).toBe(45);
       completions++;
@@ -115,6 +132,21 @@ test("authenticated completion searches the server for an uncached part and pres
         actualMinutes: 45,
         completedAt: new Date().toISOString(),
         usedItems: [
+          {
+            id: toolId,
+            name: "Calibrated wrench",
+            type: "tools",
+            quantity: 0,
+            reserved: 2,
+            partNumber: "TOOL-42",
+            manufacturer: "",
+            location: "Cabinet",
+            spec: "",
+            calibration: "2027-01-01",
+            compatible: "",
+            alternatives: "",
+            usedQuantity: 1,
+          },
           {
             id: partId,
             name: "Bulk lubricant",
@@ -168,6 +200,18 @@ test("authenticated completion searches the server for an uncached part and pres
     .click();
   await page.getByLabel("Käytetty määrä · Bulk lubricant").fill("2.5");
   await expect(page.getByText("kg", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Lisää · Käytetyt työkalut" }).click();
+  await page.getByRole("searchbox").fill("TOOL-42");
+  const tool = page.getByRole("button", {
+    name: /Calibrated wrench.*Tuotenumero/,
+  });
+  await expect(tool).toBeEnabled();
+  await expect(tool).not.toContainText("Käytettävissä");
+  await tool.click();
+  await expect(page.getByText("Käytetty", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("Käytetty määrä · Calibrated wrench"),
+  ).toHaveCount(0);
   await page.getByLabel("Käytetty aika (min)").fill("45");
   await page
     .getByLabel("Muistiinpanot / vahvistettu korjaus")
@@ -175,11 +219,14 @@ test("authenticated completion searches the server for an uncached part and pres
   await page.getByRole("button", { name: "Vahvista", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(completions).toBe(1);
-  expect(searches).toBe(1);
+  expect(searches).toBe(2);
   await page.reload();
   await page.getByRole("button", { name: /Server search maintenance/ }).click();
   await expect(
     page.getByText("Verified server completion", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Bulk lubricant · LUB-42: 2.5 kg")).toBeVisible();
+  await expect(
+    page.getByText("Calibrated wrench · TOOL-42: Käytetty"),
+  ).toBeVisible();
 });

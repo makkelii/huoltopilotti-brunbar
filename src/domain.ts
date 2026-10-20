@@ -137,7 +137,7 @@ export function completeJob(
       n < 0 ||
       !item ||
       (item.inactive && n > 0) ||
-      n > item.quantity - item.reserved
+      (item.type !== "tools" && n > item.quantity - item.reserved)
     )
       throw Error("stock");
   }

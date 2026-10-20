@@ -128,7 +128,18 @@ test("edits equipment, creates and edits job, prepares and completes with stock 
       .filter({ hasText: "Momenttiavain" })
       .getByRole("cell")
       .nth(2),
-  ).toHaveText("2");
+  ).toHaveText("");
+  const toolQuantity = await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem("huoltopilotti-demo-v1")!);
+    return saved.items.find(
+      (item: { id: string }) => item.id === "i1",
+    ).quantity;
+  });
+  expect(toolQuantity).toBe(2);
+  await page.getByLabel("Tyyppi").selectOption("tools");
+  await expect(page.getByRole("columnheader", { name: "Määrä" })).toHaveCount(
+    0,
+  );
   await navigate("Raportit");
   await page.getByRole("button", { name: /Revised maintenance/ }).click();
   await expect(

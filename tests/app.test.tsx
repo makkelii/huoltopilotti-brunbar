@@ -111,3 +111,44 @@ it("requires human approval before changing template quantities", async () => {
   ).toBe(2);
   confirm.mockRestore();
 });
+
+it("creates a tool without quantity and hides stock columns for tools", async () => {
+  const { within } = await import("@testing-library/react");
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Varasto ja työkalut" }));
+  fireEvent.click(screen.getByRole("button", { name: "Lisää nimike" }));
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.queryByLabelText("Määrä")).not.toBeInTheDocument();
+  fireEvent.change(dialog.getByLabelText("Tyyppi"), {
+    target: { value: "parts" },
+  });
+  expect(dialog.getByLabelText("Määrä")).toBeInTheDocument();
+  fireEvent.change(dialog.getByLabelText("Tyyppi"), {
+    target: { value: "tools" },
+  });
+  expect(dialog.queryByLabelText("Määrä")).not.toBeInTheDocument();
+  fireEvent.change(dialog.getByLabelText("Nimi"), {
+    target: { value: "Test wrench" },
+  });
+  fireEvent.change(dialog.getByLabelText("Varastopaikka"), {
+    target: { value: "Cabinet" },
+  });
+  fireEvent.click(dialog.getByRole("button", { name: "Tallenna" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  const item = JSON.parse(
+    localStorage.getItem("huoltopilotti-demo-v1")!,
+  ).items.find((i: { name: string }) => i.name === "Test wrench");
+  expect(item.type).toBe("tools");
+  expect(item.quantity).toBe(0);
+  fireEvent.change(screen.getByLabelText("Tyyppi"), {
+    target: { value: "tools" },
+  });
+  expect(
+    screen.queryByRole("columnheader", { name: "Määrä" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("columnheader", { name: "Varaukset" }),
+  ).not.toBeInTheDocument();
+});
